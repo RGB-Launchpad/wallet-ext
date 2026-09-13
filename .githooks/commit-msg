@@ -1,0 +1,8 @@
+#!/bin/sh
+# Refuse a commit message containing Chinese text or full-width punctuation.
+# Lines starting with `#` are git's template comments and are stripped before the commit is recorded.
+if grep -v '^#' "$1" | perl -CSD -ne '$bad = 1 if /[\x{3000}-\x{303F}\x{FF00}-\x{FFEF}\x{4E00}-\x{9FFF}]/; END { exit($bad ? 1 : 0) }'; then
+  exit 0
+fi
+echo "commit-msg: write commit messages in English (no Chinese text or full-width punctuation)." >&2
+exit 1
