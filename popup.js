@@ -461,6 +461,17 @@ async function loadSendForm() {
 
 function currentAsset() { return assetsCache.find((x) => x.assetId === $("sAsset").value); }
 
+/**
+ * The most a send can move right now, in base units.
+ *
+ * NOTE: `settled` also counts assets on UTXOs held by an open invoice or a pending transfer.
+ * rgb-lib will not spend those, so checking a send against `settled` lets it through only for
+ * rgb-lib to fail with "Insufficient total assignments".
+ */
+function sendableRaw(a) {
+    return BigInt(a?.balance?.spendable ?? a?.balance?.settled ?? "0");
+}
+
 function syncUnit() {
     const a = currentAsset();
     // Without precision the amount has to be entered in base units.
@@ -469,7 +480,15 @@ function syncUnit() {
             ? " — precision unknown, enter base units"
             : ` — up to ${a.precision} decimals`)
         : "";
+    const max = $("sMax");
+    max.hidden = !a;
+    if (a) max.textContent = `Max ${amountOf(sendableRaw(a).toString(), a.precision).text}`;
 }
+
+$("sMax").onclick = () => {
+    const a = currentAsset();
+    if (a) $("sAmount").value = amountOf(sendableRaw(a).toString(), a.precision).text;
+};
 $("sAsset").onchange = syncUnit;
 
 // ---------- Bitcoin amount unit ----------
@@ -590,8 +609,10 @@ $("doSendRgb").onclick = async () => {
             : toRaw($("sAmount").value.trim(), a.precision);
     } catch (e) { return setErr("sendErr", `Invalid amount: ${e.message}`); }
 
-    const have = BigInt(a.balance?.settled ?? "0");
-    if (BigInt(amountRaw) > have) return setErr("sendErr", "Insufficient balance");
+    const have = sendableRaw(a);
+    if (BigInt(amountRaw) > have) {
+        return setErr("sendErr", `More than can be sent now. Max ${amountOf(have.toString(), a.precision).text}`);
+    }
 
     const btn = $("doSendRgb"); btn.disabled = true; btn.textContent = "Sending…";
     const r = await call("sendRgb", {

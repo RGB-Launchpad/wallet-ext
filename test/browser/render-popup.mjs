@@ -45,6 +45,13 @@ const ASSETS = [{
 }];
 const BASE = { backupNeeded: true, persisted: false, backupDoneAt: 1, assets: ASSETS };
 
+// 1278888 settled, of which only 8888 sits on UTXOs no invoice or pending transfer holds.
+const HELD = {
+    assetId: "rgb:KpdyOz~w-K~VX34e-4~u0gsM-l9eCz9~-cVplLOG-Kg0W2MQ", ticker: "TEST", name: "Test",
+    precision: 8,
+    balance: { settled: "127888800000000", future: "127888800000000", spendable: "888800000000" },
+};
+
 const NOW = Math.floor(Date.now() / 1000);
 const TRANSFERS = [
     { idx: 3, batch_transfer_idx: 3, status: "WaitingConfirmations", kind: "ReceiveBlind",
@@ -87,6 +94,13 @@ const CASES = [
       state: { ...BASE, assets: ASSETS, refresh: { cooledDown: true, waitMs: 3200 } },
       click: "#doRefresh",
       expect: { syncDisabled: true, syncLabel: "Sync 4s" } },
+    { name: "send-max", label: "Max offers what can be sent now, not the settled balance",
+      state: { ...BASE, assets: [HELD] }, view: "send", click: "#sMax",
+      expect: { maxShown: true, maxLabel: "Max 8888", amountValue: "8888" } },
+    { name: "send-over-max", label: "an amount above the max is stopped before rgb-lib sees it",
+      state: { ...BASE, assets: [HELD] }, view: "send",
+      fill: { "#sAmount": "1270000" }, click: "#doSendRgb",
+      expect: { sendErr: "More than can be sent now. Max 8888" } },
     { name: "activity-confirmations", label: "Activity shows confirmation progress",
       state: { ...BASE, transfers: TRANSFERS, target: 3 }, view: "hist",
       expect: { rows: 4,
@@ -109,6 +123,7 @@ for (const c of CASES) {
         await p.click(`[data-view="${c.view}"]`);
         await p.waitForSelector(`#v-${c.view}:not([hidden])`, { timeout: 5000 });
     }
+    for (const [sel, value] of Object.entries(c.fill || {})) await p.fill(sel, value);
     // Some screens only show what matters after an action — the sync cooldown, for one.
     if (c.click) await p.click(c.click);
     await p.waitForTimeout(300);
@@ -123,6 +138,10 @@ for (const c of CASES) {
         }),
         // Label and value read separately: the template puts them adjacent, so joining
         // the text would depend on incidental whitespace.
+        maxShown: !document.getElementById("sMax").hidden,
+        maxLabel: document.getElementById("sMax").textContent,
+        amountValue: document.getElementById("sAmount").value,
+        sendErr: document.getElementById("sendErr").hidden ? "" : document.getElementById("sendErr").textContent,
         syncDisabled: document.getElementById("doRefresh").disabled,
         syncLabel: document.getElementById("doRefresh").textContent,
         btcRows: [...document.querySelectorAll("#btcBal .row")].map((el) =>
