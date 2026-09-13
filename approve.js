@@ -1,0 +1,50 @@
+// Approval window: shows the request and returns the user's decision.
+import { call } from "./lib/msg.js";
+
+const $ = (id) => document.getElementById(id);
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+const reqId = new URLSearchParams(location.search).get("req");
+
+(async () => {
+    const r = await call("approvalGet", { reqId });
+    if (!r.ok) { $("body").innerHTML = `<p class="err">${esc(r.err)}</p>`; return; }
+    const { method, origin, params } = r.data;
+
+    const who = `<p class="muted">Request from</p><p class="origin">${esc(origin)}</p>`;
+    const acct = await call("identity");
+    const addr = acct.ok ? `<p class="muted">Signing address</p><p class="origin">${esc(acct.data.address)}</p>` : "";
+
+    if (method === "connect") {
+        $("body").innerHTML = `<h2>Connect</h2>${who}
+            <p class="muted">The site will see your identity address and can request signatures.</p>
+            ${addr}
+            <p class="warn">Connecting moves no assets and does not expose your keys.</p>`;
+    } else if (method === "signMessage") {
+        // The full message, never truncated.
+        $("body").innerHTML = `<h2>Sign message</h2>${who}
+            <div class="msg">${esc(params.message)}</div>
+            ${addr}
+            <p class="warn">Signing moves no assets. It proves you control the address above.</p>`;
+    } else {
+        $("body").innerHTML = `<h2>Unknown request</h2>${who}<p class="err">${esc(method)}</p>`;
+    }
+    $("actions").hidden = false;
+})();
+
+async function decide(approve) {
+    $("approve").disabled = $("reject").disabled = true;
+    const r = await call("approvalDecide", { reqId, approve });
+    if (!r.ok) {
+        $("err").textContent = r.err;
+        $("err").hidden = false;
+        $("approve").disabled = $("reject").disabled = false;
+        return;
+    }
+    window.close();
+}
+$("approve").onclick = () => decide(true);
+$("reject").onclick = () => decide(false);
+// Closing the window counts as a rejection.
+window.addEventListener("beforeunload", () => { call("approvalDecide", { reqId, approve: false }); });

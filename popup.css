@@ -1,0 +1,91 @@
+:root { color-scheme: light dark; --fg:#111; --muted:#666; --line:#e5e5e5; --bg:#fff;
+        --warn-bg:#fff8e6; --warn-line:#e8c96b; --err:#b3261e; --accent:#111; }
+@media (prefers-color-scheme: dark) {
+  :root { --fg:#e8e8e8; --muted:#9a9a9a; --line:#333; --bg:#1a1a1a;
+          --warn-bg:#2a2413; --warn-line:#6b5b23; --err:#f2b8b5; --accent:#e8e8e8; }
+}
+* { box-sizing: border-box; }
+body { margin:0; width:380px; font:13px/1.55 -apple-system, system-ui, sans-serif; color:var(--fg); background:var(--bg); }
+/* Full-tab mode. The popup is a fixed 380px strip; in a tab that reads as a broken layout,
+   so the width becomes a max and the column is centred. Everything else is unchanged —
+   the point of the tab is that it survives focus changes, not that it is a different UI. */
+body.tab { width:auto; }
+body.tab #app { max-width:460px; margin:0 auto; padding-top:8px; }
+#app { padding:12px 14px 16px; }
+header { display:flex; align-items:center; gap:6px; white-space:nowrap; padding-bottom:10px; border-bottom:1px solid var(--line); margin-bottom:12px; }
+.brand { font-weight:700; white-space:nowrap; }
+.grow { flex:1; }
+.pill { font-size:11px; color:var(--muted); border:1px solid var(--line); border-radius:99px;
+        padding:1px 8px; white-space:nowrap; }
+h2 { font-size:14px; margin:0 0 10px; }
+input, textarea, select { width:100%; font:inherit; padding:7px 9px; margin:0 0 8px; border:1px solid var(--line);
+        border-radius:6px; background:transparent; color:var(--fg); }
+textarea { resize:vertical; font-family:ui-monospace, SFMono-Regular, Menlo, monospace; font-size:11px; word-break:break-all; }
+button { font:inherit; padding:6px 12px; border:1px solid var(--line); border-radius:6px; background:transparent;
+         color:var(--fg); cursor:pointer; }
+button:hover:not(:disabled) { border-color:var(--fg); }
+button:disabled { opacity:.45; cursor:default; }
+button.primary { background:var(--accent); color:var(--bg); border-color:var(--accent); width:100%; margin-top:2px; }
+button.ghost { border:none; color:var(--muted); padding:2px 6px; }
+.tabs { display:flex; gap:4px; margin-bottom:12px; flex-wrap:wrap; }
+.tab { font-size:12px; padding:4px 9px; color:var(--muted); }
+.tab.on { color:var(--fg); border-color:var(--fg); }
+.row { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+/* A component of the row above it, not a figure of its own. */
+.row.sub { padding-left:12px; margin-bottom:4px; font-size:12px; }
+.row > span { flex:1; }
+.muted { color:var(--muted); font-size:12px; }
+.err { color:var(--err); font-size:12px; margin-top:8px; word-break:break-word; }
+.warn { background:var(--warn-bg); border:1px solid var(--warn-line); border-radius:6px;
+        padding:8px 10px; font-size:12px; margin:0 0 10px; }
+/* One row per warning: the text, and the button that clears it. */
+.bn { display:flex; align-items:center; gap:8px; }
+.bn + .bn { margin-top:6px; padding-top:6px; border-top:1px solid var(--warn-line); }
+.bn > span { flex:1; }
+.bn > button { flex:none; white-space:nowrap; }
+#banner { background:var(--warn-bg); border:1px solid var(--warn-line); border-radius:6px;
+          padding:8px 10px; font-size:12px; margin-bottom:12px; }
+/* Header notice. Non-blocking warnings collapse behind it so they stop nagging;
+   blocking ones open the strip themselves. */
+.notice { border:1px solid var(--warn-line); background:var(--warn-bg); color:var(--fg);
+          border-radius:99px; padding:1px 7px; font-size:11px; line-height:1.5; }
+pre { background:var(--warn-bg); border:1px solid var(--warn-line); border-radius:6px; padding:10px;
+      white-space:pre-wrap; word-break:break-word; font-size:13px; margin:0 0 10px; }
+.check { display:flex; gap:6px; align-items:center; font-size:12px; margin-bottom:10px; }
+.check input { width:auto; margin:0; }
+/* Any identifier: txids, invoices, addresses. Unbroken hex is long enough to push a fixed
+   380px popup wider than the window, so it has to break. */
+code { font-family:ui-monospace, Menlo, monospace; font-size:11px; word-break:break-all; }
+.addr { flex:1; font-family:ui-monospace, Menlo, monospace; font-size:11px; word-break:break-all; }
+/* Nothing may widen the popup: the body has a fixed width and a stray long token overflows it. */
+#app { overflow-wrap:anywhere; }
+.asset { border:1px solid var(--line); border-radius:6px; padding:8px 10px; margin-bottom:8px; }
+.asset .top { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+.asset .tk { font-weight:700; }
+.asset .amt { font-variant-numeric:tabular-nums; font-weight:600; }
+.asset .id { font-family:ui-monospace, Menlo, monospace; font-size:10px; color:var(--muted); word-break:break-all; margin-top:3px; }
+.asset .unk { color:var(--err); font-size:11px; }
+/* Home. The asset list is the wallet; actions sit under it as buttons, and the rest are
+   links, not destinations. */
+.listhead { display:flex; align-items:center; gap:8px; margin-bottom:8px; min-height:28px; }
+.actions { display:flex; gap:8px; margin:12px 0 8px; }
+.actions button { flex:1; }
+.links { display:flex; gap:4px; flex-wrap:wrap; }
+.links button { font-size:12px; }
+.panelhead { display:flex; align-items:center; gap:8px; margin-bottom:12px;
+             padding-bottom:8px; border-bottom:1px solid var(--line); }
+.panelhead b { font-size:14px; }
+/* Where the balance sits. Reads as a caption, not as a second number. */
+.brk { font-size:12px; color:var(--muted); margin-top:3px; }
+.asset.click { cursor:pointer; }
+.asset.click:hover { border-color:var(--fg); }
+
+label { display:block; font-size:12px; color:var(--muted); margin-bottom:2px; }
+/* Unit switch sits on the label line so it reads as part of the field, not a separate control. */
+.unit-switch { float:right; display:inline-flex; gap:2px; }
+.unit { font-size:11px; padding:1px 6px; color:var(--muted); border-radius:4px; }
+.unit.on { color:var(--fg); border-color:var(--fg); }
+/* Hint under an input: the estimate note and the converted amount. */
+p.muted[id$="Hint"] { margin:2px 0 10px; min-height:1em; }
+hr { border:none; border-top:1px solid var(--line); margin:14px 0; }
+details summary { cursor:pointer; font-size:12px; color:var(--muted); margin-bottom:8px; }

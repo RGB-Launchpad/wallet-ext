@@ -1,0 +1,207 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>RGB Wallet</title>
+<link rel="stylesheet" href="popup.css">
+<div id="app">
+  <header>
+    <span class="brand">RGB Wallet</span>
+    <span class="grow"></span>
+    <span id="net" class="pill"></span>
+    <button id="notice" class="ghost notice" hidden></button>
+    <button id="expand" class="ghost" title="Open in a full tab so it stays open">Tab</button>
+    <button id="gear" class="ghost">Settings</button>
+    <button id="lock" class="ghost" hidden>Lock</button>
+  </header>
+
+  <div id="banner" hidden></div>
+
+  <section id="setup" hidden>
+    <h2>No wallet yet</h2>
+    <div class="tabs">
+      <button data-mode="new" class="tab on">Create</button>
+      <button data-mode="import" class="tab">Import phrase</button>
+    </div>
+    <textarea id="mnemonicIn" rows="3" placeholder="12 or 24 words, space separated" hidden></textarea>
+    <input id="pw1" type="password" placeholder="Password (8+ characters)" autocomplete="new-password">
+    <input id="pw2" type="password" placeholder="Repeat password" autocomplete="new-password">
+    <p class="warn">The password encrypts your recovery phrase on this device. There is no password recovery.</p>
+    <button id="doCreate" class="primary">Create</button>
+    <div id="setupErr" class="err" hidden></div>
+  </section>
+
+  <section id="seed" hidden>
+    <h2>Write down these words</h2>
+    <pre id="seedWords"></pre>
+    <p class="warn">Do not import this phrase into an ordinary Bitcoin wallet. Those wallets cannot see
+      RGB allocations, and spending one destroys the assets permanently.</p>
+    <p class="warn">The phrase alone does not restore RGB assets. Export a backup as well.</p>
+    <label class="check"><input type="checkbox" id="seedOk"> Written down and stored offline</label>
+    <button id="seedDone" class="primary" disabled>Continue</button>
+  </section>
+
+  <section id="locked" hidden>
+    <h2>Unlock</h2>
+    <input id="pwUnlock" type="password" placeholder="Password" autocomplete="current-password">
+    <button id="doUnlock" class="primary">Unlock</button>
+    <div id="lockErr" class="err" hidden></div>
+    <div id="lockMsg" class="muted" hidden></div>
+  </section>
+
+  <section id="main" hidden>
+    <div id="v-home" class="view">
+      <div class="listhead">
+        <span id="refreshMs" class="muted grow"></span>
+        <button id="doRefresh">Sync</button>
+      </div>
+      <div id="chainReset" hidden>
+        <p class="warn">The Regtest chain was rebuilt, so this wallet's Regtest history no longer
+          matches it. Resetting clears Regtest data on this device. Signet is not touched.</p>
+        <button id="doChainReset">Reset Regtest data</button>
+      </div>
+      <div id="homeList"><p class="muted">Loading…</p></div>
+      <div class="actions">
+        <button data-view="recv">Receive</button>
+        <button data-view="send">Send</button>
+      </div>
+      <div class="links">
+        <button data-view="hist" class="ghost">Activity</button>
+        <button data-view="backup" class="ghost">Backup</button>
+      </div>
+      <div id="homeErr" class="err" hidden></div>
+    </div>
+
+    <div id="v-recv" class="view" hidden>
+      <div class="panelhead"><button data-view="home" class="ghost">← Back</button><b>Receive</b></div>
+      <p class="muted">Receiving needs an empty allocation slot. Creating slots costs an on-chain fee
+        and takes 1 confirmation.</p>
+      <div class="row">
+        <span>Free slots <b id="slots">—</b></span>
+        <button id="doPrepare">Create slots</button>
+      </div>
+      <div id="noBackupWarn" class="warn" hidden>
+        No backup exported yet. If this device is lost, the recovery phrase alone will not restore the assets.
+        <div class="row" style="margin-top:8px">
+          <button id="goBackup">Back up now</button>
+          <button id="anyway" class="ghost">Continue anyway</button>
+        </div>
+      </div>
+      <button id="doInvoice" class="primary">Create invoice</button>
+      <div id="invoiceBox" hidden>
+        <p class="muted">Give this to the sender.</p>
+        <textarea id="invoice" rows="4" readonly></textarea>
+        <button id="copyInvoice">Copy</button>
+        <p class="muted" id="invoiceExp"></p>
+      </div>
+      <div id="recvErr" class="err" hidden></div>
+    </div>
+
+    <div id="v-send" class="view" hidden>
+      <div class="panelhead"><button data-view="home" class="ghost">← Back</button><b>Send</b></div>
+      <div class="tabs">
+        <button data-send="rgb" class="tab on">RGB</button>
+        <button data-send="btc" class="tab">Bitcoin</button>
+      </div>
+
+      <div id="send-rgb">
+        <label>Recipient invoice</label>
+        <textarea id="sInvoice" rows="3" placeholder="rgb:…"></textarea>
+        <button id="doDecode">Inspect invoice</button>
+        <div id="decoded" class="muted"></div>
+        <label>Asset</label>
+        <select id="sAsset"></select>
+        <label>Amount<span id="sUnit" class="muted"></span></label>
+        <input id="sAmount" placeholder="0.0">
+        <label>Fee rate sat/vB</label>
+        <input id="sFee" type="number" min="1">
+        <p class="muted" id="sFeeHint"></p>
+        <button id="doSendRgb" class="primary">Send</button>
+      </div>
+
+      <div id="send-btc" hidden>
+        <p class="muted">Spends plain Bitcoin only. UTXOs holding RGB assets are never touched.</p>
+        <label>Bitcoin address</label>
+        <input id="bAddr" placeholder="bc1…">
+        <label>Amount
+          <span class="unit-switch">
+            <button type="button" id="bUnitBtc" class="unit on">BTC</button>
+            <button type="button" id="bUnitSat" class="unit">sats</button>
+          </span>
+        </label>
+        <input id="bAmount" placeholder="0.001">
+        <p class="muted" id="bAmountHint"></p>
+        <p class="muted" id="bAvail"></p>
+        <label>Fee rate sat/vB</label>
+        <input id="bFee" type="number" min="1">
+        <p class="muted" id="bFeeHint"></p>
+        <button id="doSendBtc" class="primary">Send</button>
+      </div>
+      <div id="sendErr" class="err" hidden></div>
+      <div id="sendOut" class="muted"></div>
+    </div>
+
+    <div id="v-hist" class="view" hidden>
+      <div class="panelhead"><button data-view="home" class="ghost">← Back</button><b>Activity</b></div>
+      <div class="row"><button id="doHist">Refresh</button><button id="doCleanup">Clear expired invoices</button></div>
+      <p class="muted">Expired invoices hold on to allocation slots.</p>
+      <div id="histList"></div>
+    </div>
+
+    <div id="v-btc" class="view" hidden>
+      <div class="panelhead"><button data-view="home" class="ghost">← Back</button><b>Bitcoin</b></div>
+      <p class="muted">Receives plain Bitcoin, used for on-chain fees.</p>
+      <div class="row"><code id="btcAddr" class="addr">—</code><button id="copyAddr">Copy</button></div>
+      <div id="btcBal"></div>
+    </div>
+
+    <div id="v-backup" class="view" hidden>
+      <div class="panelhead"><button data-view="home" class="ghost">← Back</button><b>Backup</b></div>
+      <p class="warn">The recovery phrase alone does not restore RGB assets. Export a backup after
+        receiving new assets.</p>
+      <input id="bkPw" type="password" placeholder="Backup password (8+ characters)">
+      <button id="doBackup" class="primary">Export encrypted backup</button>
+      <div id="bkOut" class="muted"></div>
+      <hr>
+      <details>
+        <summary>Restore from backup</summary>
+        <p class="muted">Import the same recovery phrase first, then select the backup file.</p>
+        <input id="rsFile" type="file" accept=".bin,application/octet-stream">
+        <input id="rsPw" type="password" placeholder="Backup password">
+        <button id="doRestore">Restore</button>
+        <div id="rsOut" class="muted"></div>
+      </details>
+    </div>
+  </section>
+
+  <section id="settings-view" hidden>
+    <h2>Settings</h2>
+    <label>Network<select id="stNetwork"></select></label>
+    <label>Indexer (Esplora HTTP)<input id="stEsplora" placeholder="https://…/api"></label>
+    <label>RGB proxy<input id="stProxy" placeholder="rpc://…/json-rpc"></label>
+    <button id="doSaveSettings">Save</button>
+    <hr>
+    <details id="sitesBox">
+      <summary>Connected sites</summary>
+      <p class="muted">These sites can see your identity address and request signatures.
+        Every signature still needs your approval.</p>
+      <div id="sitesList"></div>
+    </details>
+    <hr>
+    <details>
+      <summary>Change password</summary>
+      <input id="cpOld" type="password" placeholder="Current password">
+      <input id="cpNew" type="password" placeholder="New password (8+ characters)">
+      <button id="doChangePw">Change password</button>
+    </details>
+    <hr>
+    <details>
+      <summary>Erase this wallet</summary>
+      <p class="warn">Deletes the recovery phrase and all consignments from this device.
+        Without a backup the assets cannot be recovered.</p>
+      <label class="check"><input type="checkbox" id="wipeOk"> I have a backup</label>
+      <button id="doWipe" disabled>Erase</button>
+    </details>
+    <div id="stMsg" class="muted"></div>
+    <button id="gearBack" class="ghost">← Back</button>
+  </section>
+</div>
+<script type="module" src="popup.js"></script>

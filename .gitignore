@@ -1,0 +1,6 @@
+# Release artifacts. Built by the release workflow and attached to the release, not committed.
+store/*.zip
+store/SHA256SUMS
+store/notes.md
+
+.DS_Store

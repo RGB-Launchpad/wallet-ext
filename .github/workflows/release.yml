@@ -1,0 +1,88 @@
+name: release
+
+# Kept separate from the test workflow rather than sharing one `on:` block. A `push` trigger
+# carrying both `tags` and `paths` is ambiguous about whether a tag push survives the path
+# filter, and a release that silently never fires is worse than a second file.
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write          # required to create the release
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - run: node --test test/*.mjs
+
+      # The tag is what people install by, so it has to agree with what the browser shows.
+      - name: Tag and manifest version must agree
+        id: version
+        run: |
+          manifest=$(python3 -c "import json;print(json.load(open('manifest.json'))['version'])")
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$manifest" != "$tag" ]; then
+            echo "tag $GITHUB_REF_NAME says $tag, manifest.json says $manifest" >&2
+            exit 1
+          fi
+          echo "version=$manifest" >> "$GITHUB_OUTPUT"
+
+      - run: ./store/pack.sh
+
+      # The engine is 13 MB and tracked here. If it ever goes missing the zip still builds,
+      # and the failure only shows up in someone's browser.
+      - name: Packed extension must contain the wasm engine
+        run: |
+          zip="store/rgb-wallet-${{ steps.version.outputs.version }}.zip"
+          # Decompressed byte count, not a column of `unzip -l`: that listing format is not
+          # something to depend on.
+          size=$(unzip -p "$zip" pkg/rgb_lib_wasm_bindings_bg.wasm | wc -c)
+          echo "wasm in zip: $size bytes"
+          [ "$size" -gt 10000000 ] || { echo "engine missing or truncated" >&2; exit 1; }
+
+      # A second copy under a name with no version in it. `releases/latest/download/` can
+      # only address an asset by a fixed name, and that is what the README links to — a
+      # versioned link in the README would break on the next release.
+      - name: Copy under a stable name
+        run: cp "store/rgb-wallet-${{ steps.version.outputs.version }}.zip" store/rgb-wallet.zip
+
+      # Anyone can copy this extension, change it, and re-host the zip — no licence stops
+      # that. A checksum published beside the release is what lets someone check that the
+      # file they downloaded is the one this repository built.
+      - name: Checksum
+        run: |
+          v="${{ steps.version.outputs.version }}"
+          ( cd store && shasum -a 256 "rgb-wallet-$v.zip" "rgb-wallet.zip" > SHA256SUMS )
+          cat store/SHA256SUMS
+          cp store/RELEASE_NOTES.md store/notes.md
+          {
+            echo
+            echo "---"
+            echo
+            echo '**SHA-256.** Check the file you downloaded against this:'
+            echo
+            echo '```'
+            sed "s/  rgb-wallet/  rgb-wallet/" store/SHA256SUMS
+            echo '```'
+            echo
+            echo 'macOS or Linux: `shasum -a 256 rgb-wallet.zip`.'
+            echo 'Windows: `certutil -hashfile rgb-wallet.zip SHA256`.'
+          } >> store/notes.md
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Notes live in store/RELEASE_NOTES.md. A heredoc inside a YAML block scalar ends the
+        # scalar at its column-1 terminator, which is a parse error rather than a warning.
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "RGB Wallet ${{ steps.version.outputs.version }}" \
+            --notes-file store/notes.md \
+            "store/rgb-wallet-${{ steps.version.outputs.version }}.zip" \
+            store/rgb-wallet.zip \
+            store/SHA256SUMS

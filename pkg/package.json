@@ -1,0 +1,16 @@
+{
+  "name": "rgb-lib-wasm-bindings",
+  "type": "module",
+  "description": "RGB wallet library WASM bindings for browsers",
+  "version": "0.3.0-beta.5",
+  "files": [
+    "rgb_lib_wasm_bindings_bg.wasm",
+    "rgb_lib_wasm_bindings.js",
+    "rgb_lib_wasm_bindings.d.ts"
+  ],
+  "main": "rgb_lib_wasm_bindings.js",
+  "types": "rgb_lib_wasm_bindings.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}

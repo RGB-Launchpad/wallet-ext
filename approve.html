@@ -1,0 +1,23 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>RGB Wallet · Request</title>
+<link rel="stylesheet" href="popup.css">
+<style>
+  body { width: auto; }
+  .origin { font-family: ui-monospace, Menlo, monospace; font-size: 13px; font-weight: 700; word-break: break-all; }
+  .msg { background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 6px;
+         padding: 10px; white-space: pre-wrap; word-break: break-word;
+         font-family: ui-monospace, Menlo, monospace; font-size: 12px; max-height: 220px; overflow: auto; }
+  .actions { display: flex; gap: 8px; margin-top: 14px; }
+  .actions button { flex: 1; }
+</style>
+<div id="app">
+  <header><span class="brand">RGB Wallet</span></header>
+  <div id="body">Loading…</div>
+  <div class="actions" id="actions" hidden>
+    <button id="reject">Reject</button>
+    <button id="approve" class="primary">Approve</button>
+  </div>
+  <div id="err" class="err" hidden></div>
+</div>
+<script type="module" src="approve.js"></script>
