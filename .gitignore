@@ -4,3 +4,16 @@ store/SHA256SUMS
 store/notes.md
 
 .DS_Store
+
+# Keys, credentials, logs
+*.key
+*.pem
+.cookie
+*.cookie
+*.log
+logs/
+.DS_Store
+
+# Store packages (store/pack.sh rebuilds them)
+store/*.zip
+node_modules
