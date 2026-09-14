@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "RGB Wallet",
-  "version": "0.10.3",
+  "version": "0.11.0",
   "description": "Self-custodial RGB asset wallet. Keys and consignments stay on your device.",
   "permissions": [
     "offscreen",

@@ -147,16 +147,17 @@ carries assets. Invoice lifetimes are short for that reason.
 
 ## Endpoints
 
-| | Signet (default) | Testnet | Regtest |
+| | Signet (default) | Testnet4 | Regtest |
 |---|---|---|---|
-| Indexer | `https://mempool.space/signet/api` | `https://mempool.space/testnet/api` | `https://regtest-indexer.rgblaunchpad.meme/regtest/api` |
+| Indexer | `https://mempool.space/signet/api` | `https://mempool.space/testnet4/api` | `https://regtest-indexer.rgblaunchpad.meme/regtest/api` |
 | RGB proxy | `rpcs://proxy.rgblaunchpad.meme/json-rpc` | `rpcs://proxy.rgblaunchpad.meme/json-rpc` | `rpcs://regtest-proxy.rgblaunchpad.meme/json-rpc` |
 
 No default points at localhost: one machine runs the regtest sandbox and the rest reach it
 through a tunnel. Endpoints outside `host_permissions` are requested when settings are saved.
 
-`Testnet` is testnet3. Its addresses share the `tb1` prefix with Signet, so the network label
-is the only thing distinguishing them; a consignment sent on the wrong network is lost.
+Testnet4 addresses share the `tb1` prefix with Signet, so an address cannot tell them apart;
+only the network setting and the invoice's network field do, and a consignment sent on the
+wrong network is lost. Testnet3 is not offered; a wallet stored with it falls back to Signet.
 
 Stored per network: configuring Signet does not overwrite Regtest.
 

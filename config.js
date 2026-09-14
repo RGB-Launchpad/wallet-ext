@@ -7,11 +7,12 @@ export const NETWORKS = {
         // Consignment relay. It sees recipient identifiers, so it is our own deployment.
         proxy: "rpcs://proxy.rgblaunchpad.meme/json-rpc",
     },
-    // `Testnet` is testnet3 in rgb-lib's BitcoinNetwork enum. Its addresses use the same
-    // `tb1` prefix as Signet, so the network label is the only thing telling them apart.
-    Testnet: {
-        label: "Testnet",
-        esplora: "https://mempool.space/testnet/api",
+    // NOTE: testnet4 addresses carry the same `tb1` prefix as Signet, so an address cannot tell
+    // the two apart. Only the network setting and the invoice's network field do; a consignment
+    // sent on the wrong one is lost.
+    Testnet4: {
+        label: "Testnet4",
+        esplora: "https://mempool.space/testnet4/api",
         proxy: "rpcs://proxy.rgblaunchpad.meme/json-rpc",
     },
     // The regtest sandbox runs on one machine and reaches everyone else through a tunnel,

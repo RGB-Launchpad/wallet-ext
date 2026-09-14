@@ -21,5 +21,5 @@ test("recognises BDK's error for a replaced chain", () => {
 test("only Regtest can be reset", () => {
     assert.ok(RESETTABLE.has("Regtest"));
     assert.ok(!RESETTABLE.has("Signet"));
-    assert.ok(!RESETTABLE.has("Testnet"));
+    assert.ok(!RESETTABLE.has("Testnet4"));
 });

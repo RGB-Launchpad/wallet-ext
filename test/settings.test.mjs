@@ -2,7 +2,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { migrate, resolve, apply, netDefaults } from "../lib/settings.js";
-import { NETWORKS } from "../config.js";
+import { NETWORKS, DEFAULTS } from "../config.js";
 
 test("a fresh install resolves to that network's defaults", () => {
     const { raw } = migrate(undefined);
@@ -107,4 +107,24 @@ test("endpoints stay isolated across every configured network", () => {
     const names = Object.keys(NETWORKS);
     for (const n of names) raw = apply(raw, { network: n, esploraUrl: `https://${n}.example/api` });
     for (const n of names) assert.equal(resolve(raw, n).esploraUrl, `https://${n}.example/api`);
+});
+
+test("a stored network that is no longer offered falls back to the default", () => {
+    const { raw, changed } = migrate({ network: "Testnet",
+        byNetwork: { Testnet: { esploraUrl: "https://mempool.space/testnet/api" },
+                     Signet: { esploraUrl: "https://mine.example/api" } } });
+    assert.equal(changed, true);
+    assert.equal(raw.network, DEFAULTS.network);
+    assert.equal(raw.byNetwork.Testnet, undefined, "endpoints of a removed network are dropped");
+    assert.equal(raw.byNetwork.Signet.esploraUrl, "https://mine.example/api", "the rest are kept");
+});
+
+test("dropping a removed network is idempotent", () => {
+    const first = migrate({ network: "Testnet", byNetwork: { Testnet: {} } });
+    assert.equal(migrate(first.raw).changed, false);
+});
+
+test("testnet4 is offered and testnet3 is not", () => {
+    assert.ok(Object.hasOwn(NETWORKS, "Testnet4"));
+    assert.ok(!Object.hasOwn(NETWORKS, "Testnet"));
 });

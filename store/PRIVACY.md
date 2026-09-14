@@ -29,7 +29,7 @@ The extension talks to the endpoints you configure. Nothing else.
 
 | Endpoint | What is sent | Default | Operated by |
 |---|---|---|---|
-| Bitcoin indexer (Esplora) | Your addresses and transaction ids, to read balances and to broadcast | `mempool.space` on Signet and Testnet | A third party |
+| Bitcoin indexer (Esplora) | Your addresses and transaction ids, to read balances and to broadcast | `mempool.space` on Signet and Testnet4 | A third party |
 | RGB proxy | Consignment files and the recipient identifier each one is addressed to | `proxy.rgblaunchpad.meme` | **Us** |
 
 **The RGB proxy is ours, and this is the one place your data reaches a server we run.** A
