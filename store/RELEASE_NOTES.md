@@ -16,11 +16,11 @@ Chrome 137 disabled the `--load-extension` switch, so the extension is loaded by
 
 ---
 
-**What is in the zip.** 36 files, all of them listed by `unzip -l`. Everything is readable
-source except `pkg/`, which is the RGB engine:
+**What is in the zip.** 36 files, all of them listed by `unzip -l`. Everything except `pkg/` is
+our own code, minified file by file; `pkg/` is the RGB engine:
 [rgb-lib-wasm](https://github.com/UTEXO-Protocol/rgb-lib-wasm) (MIT), built from commit
 `2610d4a` unmodified with the upstream's own `bindings/wasm/build.sh`. No npm dependencies,
-no bundler, no minified code, nothing fetched at install time. The repository README has the
+no bundler, nothing fetched at install time. The repository README has the
 steps to rebuild that binary yourself.
 
 ⚠️ That engine describes itself as *"Beta Software — under active development and has not

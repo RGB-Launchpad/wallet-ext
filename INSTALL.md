@@ -108,6 +108,5 @@ Deleting the folder without removing the extension leaves a broken entry behind.
 ## Why it is not in the Web Store
 
 Store review is a separate step from the software being ready, and publishing there is not a
-prerequisite for using it. Loading an unpacked extension runs exactly the same code — in
-fact you can read every line of it, which is not true of a store download. When it is
+prerequisite for using it. Loading an unpacked extension runs exactly the same code. When it is
 published, the store version will install and update itself the usual way.

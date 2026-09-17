@@ -44,15 +44,16 @@ nowhere else.
 
 ## What is in the package
 
-Everything here is source you can read, plus exactly one third-party binary:
+Our own code, minified, plus exactly one third-party binary:
 
 | | |
 |---|---|
 | `pkg/` | The RGB engine — **[rgb-lib-wasm](https://github.com/UTEXO-Protocol/rgb-lib-wasm)**, MIT, built from commit `2610d4a` **unmodified**, with the upstream's own `bindings/wasm/build.sh`. It is the WASM binding of [RGB-Tools/rgb-lib](https://github.com/RGB-Tools/rgb-lib) and carries the same authors. Reproduce it with the steps in [The wasm engine](#the-wasm-engine) |
-| everything else | Ours: `lib/`, the popup, the service worker, the offscreen document, the content scripts |
+| everything else | Ours: `lib/`, the popup, the service worker, the offscreen document, the content scripts. Each JS and CSS file is minified on its own by `store/pack.sh`; this repository holds the unminified source |
 
-**No npm dependencies, no bundler, no minified or generated JavaScript.** A release zip holds
-35 files; `unzip -l` lists every one of them, and nothing is fetched or built at install time.
+**No npm dependencies, no bundler.** Minification strips comments and whitespace and shortens
+local names; it does not obfuscate. `unzip -l` lists every file in a release zip, and nothing is
+fetched or built at install time.
 
 ⚠️ Upstream describes itself as **"Beta Software — under active development and has not been
 audited."** That applies to the engine this wallet runs on. Signet and small amounts only;
