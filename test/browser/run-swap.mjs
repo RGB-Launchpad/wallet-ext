@@ -1,7 +1,7 @@
 // The buyer half of a peer-to-peer swap, end to end against the regtest server: the shipped
-// offscreen.js prepares, the platform's daemon colours and signs, offscreen.js checks, signs and
-// broadcasts, and the asset lands in the wallet. What the page would do (take, poll, report) is
-// done here with a dev session.
+// offscreen.js prepares, the platform's daemon colours, offscreen.js checks and signs, the
+// platform signs last and broadcasts, and the asset lands in the wallet. What the page would do
+// (take, hand back the signature, poll) is done here with a dev session.
 //
 //     python3 test/browser/serve.py &
 //     PLAYWRIGHT=<path to index.mjs> node test/browser/run-swap.mjs <offerId>
@@ -99,7 +99,17 @@ if (process.env.ABANDON) { await b.close(); console.log(`\nABANDONED  session ${
 
 step("swapSign");
 const signed = await must("swapSign", { offerId, psbt, apiBase: API });
-await api("POST", `/v1/p2p/sessions/${taken.sessionId}/broadcast`, { txid: signed.txid });
+await api("POST", `/v1/p2p/sessions/${taken.sessionId}/sign`, { psbt: signed.psbt });
+
+step("wait for the seller to sign and broadcast");
+for (let i = 0; i < 60 && !signed.txid; i++) {
+    const s = await api("GET", `/v1/p2p/sessions/${taken.sessionId}`);
+    if (s.txid) signed.txid = s.txid;
+    else if (s.state !== "BUYER_SIGNED") die(`session is ${s.state}`);
+    else await sleep(2000);
+}
+if (!signed.txid) die("the seller did not broadcast within two minutes");
+console.log("broadcast", signed.txid);
 
 step("confirm and pick up the asset");
 mine();

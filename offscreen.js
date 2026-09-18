@@ -460,7 +460,8 @@ const handlers = {
     },
 
     /**
-     * The buyer's half, step two: check the counterparty's half-signed PSBT, sign it, broadcast.
+     * The buyer's half, step two: check the counterparty's coloured PSBT and sign this wallet's
+     * input. The seller signs after this and broadcasts.
      *
      * 🚨 The check is the whole defence. A signature covers every output, so an output redirected
      * before signing is authorised by that signature and cannot be disputed afterwards. What is
@@ -503,12 +504,13 @@ const handlers = {
             BigInt(prepared.feeSats),
         );
 
+        // The seller signs last and broadcasts: it records the transfer in its own wallet as it
+        // does so. This wallet only adds its signature; the asset arrives through the proxy once
+        // the transaction confirms.
         const signed = w.signPsbt(psbt);
-        const finalized = w.finalizePsbt(signed);
-        const txid = await w.broadcastPsbt(on, finalized);
         S.swaps.delete(String(offerId));
         await w.flush();
-        return { offerId, txid, assetId: prepared.assetId, amount: prepared.amount, priceSats: prepared.priceSats };
+        return { offerId, psbt: signed, assetId: prepared.assetId, amount: prepared.amount, priceSats: prepared.priceSats };
     },
 
     /**

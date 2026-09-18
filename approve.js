@@ -42,8 +42,8 @@ const reqId = new URLSearchParams(location.search).get("req");
             $("body").innerHTML = `<h2>Prepare a swap</h2>${who}${detail}
                 <p class="muted">This opens an invoice of your wallet and picks a UTXO to pay with. Nothing is signed and nothing moves yet.</p>`;
         } else {
-            $("body").innerHTML = `<h2>Sign and broadcast a swap</h2>${who}${detail}
-                <p class="warn">Your sats and the asset change hands in one transaction: either both or neither. The wallet checks every output against the offer before signing, and refuses if anything differs.</p>
+            $("body").innerHTML = `<h2>Sign a swap</h2>${who}${detail}
+                <p class="warn">Your sats and the asset change hands in one transaction: either both or neither. The wallet checks every output against the offer before signing, and refuses if anything differs. The seller signs after you and broadcasts it.</p>
                 <p class="muted">Wait for one confirmation before treating the asset as received.</p>`;
         }
     } else {
