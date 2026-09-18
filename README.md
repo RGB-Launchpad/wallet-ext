@@ -238,12 +238,42 @@ publishes is the same binary this repository was tested against. wasm-pack drops
 before; `pkg/.gitignore` is now a comment and a rebuild that restores the `*` shows up in
 `git status`.
 
-Built from `github.com/UTEXO-Protocol/rgb-lib-wasm` at `2610d4a`, MIT, unmodified:
+Built from `github.com/UTEXO-Protocol/rgb-lib-wasm` at `2610d4a`, MIT, **with four additions**
+for peer-to-peer swaps, where a counterparty builds the transaction and this wallet only adds its
+own signature:
+
+| Addition | Why it is needed |
+|---|---|
+| `WasmWallet.invoiceSealScript(invoice)` | The script a witness invoice pays to. rgb-lib does not expose it, and a receiver cannot otherwise tell whether a transaction pays its own seal. |
+| `WasmWallet.checkSwapPsbt(psbt, inputs, outputs, feeSats)` | Compares a PSBT with what this wallet agreed to, before signing. An expected script may be `null` to check the value only. |
+| `WasmWallet.swapPsbtInputs(psbt)` | The outpoints a PSBT spends, to tell this wallet's input from the counterparty's. |
+| `wallet.broadcastPsbt(online, finalizedPsbt)` | Broadcasts a transaction this wallet did not build. |
+
+Nothing else is changed, and no existing behaviour is touched. MIT permits the modification and
+requires its notice to travel with the binary, which [NOTICE](NOTICE) does.
 
 ```sh
 cd bindings/wasm && ./build.sh          # wasm-pack build --target web --out-dir pkg
 cp -R pkg/. <this directory>/pkg/
 ```
+
+⚠️ macOS clang cannot target wasm32, so the build runs in a container:
+
+```sh
+docker run --rm -v "$PWD":/work -w /work \
+  -e CARGO_HOME=/work/.cargo-docker -e CARGO_TARGET_DIR=/work/target-docker \
+  rust:1-bookworm bash -c '
+    export PATH=/usr/local/cargo/bin:$PATH
+    apt-get update -qq && apt-get install -y -qq clang
+    rustup target add wasm32-unknown-unknown
+    curl -sSfL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+    export PATH=/work/.cargo-docker/bin:$PATH
+    cd bindings/wasm && wasm-pack build --target web --out-dir pkg'
+```
+
+⚠️ A login shell resets `PATH` and loses `rustup`; `bash -c` with `PATH` set explicitly is what
+works. Do not pipe the build through `tail`: the container's exit code is then hidden and a
+failed build looks like a successful one.
 
 `camel_case` is already on: `bindings/wasm/Cargo.toml` enables it on the library dependency,
 so no extra feature flag is needed. Rust 1.85+ with the `wasm32-unknown-unknown` target and

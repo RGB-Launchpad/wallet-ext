@@ -114,6 +114,26 @@ async function providerCall({ method, params }, origin) {
         return r.ok ? ok({ result: r.data }) : ok({ result: null });
     }
 
+    // A swap spends this wallet's sats and receives an asset, so it is approved like a signature,
+    // not like a read. The approval window shows what the offer says.
+    if (method === "swapPrepare" || method === "swapSign") {
+        if (!(await isAuthorized(origin))) return ok({ error: RGB_ERR.unauthorized, pending: false });
+        if (!(await unlocked())) return ok({ error: RGB_ERR.locked, pending: false });
+        if (typeof params?.offerId !== "string" || !params.offerId) {
+            return ok({ error: RGB_ERR.other("offerId is required") });
+        }
+        if (typeof params?.apiBase !== "string" || !/^https:\/\//.test(params.apiBase)) {
+            return ok({ error: RGB_ERR.other("apiBase must be an https URL") });
+        }
+        if (method === "swapSign" && (typeof params?.psbt !== "string" || !params.psbt)) {
+            return ok({ error: RGB_ERR.other("psbt is required") });
+        }
+        const reqId = crypto.randomUUID();
+        await setReq(reqId, { method, origin, params, status: "pending", createdAt: Date.now() });
+        await openApproval(reqId);
+        return ok({ pending: true, reqId });
+    }
+
     if (method === "connect" || method === "signMessage") {
         if (method === "signMessage") {
             if (!(await isAuthorized(origin))) return ok({ error: RGB_ERR.unauthorized, pending: false });
@@ -157,6 +177,14 @@ async function decide({ reqId, approve }) {
         const sites = await getSites();
         sites[req.origin] = { grantedAt: Date.now() };
         await chrome.storage.local.set({ sites });
+        await setReq(reqId, { ...req, status: "done", result: r.data });
+        return ok({ status: "done" });
+    }
+
+    if (req.method === "swapPrepare" || req.method === "swapSign") {
+        const cmd = req.method === "swapPrepare" ? "swapPrepare" : "swapSign";
+        const r = await toEngine(cmd, req.params);
+        if (!r.ok) { await setReq(reqId, { ...req, status: "error", error: RGB_ERR.other(r.err) }); return ok({ status: "error" }); }
         await setReq(reqId, { ...req, status: "done", result: r.data });
         return ok({ status: "done" });
     }

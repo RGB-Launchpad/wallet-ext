@@ -33,10 +33,15 @@
 
     const provider = {
         isRgbWallet: true,
-        version: "0.2.0",
+        version: "0.3.0",
         connect: () => request("connect"),
         getAccount: () => request("getAccount"),
         signMessage: (message) => request("signMessage", { message }),
+        // Peer-to-peer swaps. The page passes an offer id and the platform's API base; the
+        // wallet fetches the offer itself, decides what it signs, and never takes a PSBT to
+        // sign blindly.
+        swapPrepare: (opts) => request("swapPrepare", opts || {}),
+        swapSign: (opts) => request("swapSign", opts || {}),
         // Reserved; currently returns "not implemented".
         getInvoice: (opts) => request("getInvoice", opts || {}),
         on(event, cb) { listeners[event]?.add(cb); },

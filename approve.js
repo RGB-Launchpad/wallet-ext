@@ -27,6 +27,25 @@ const reqId = new URLSearchParams(location.search).get("req");
             <div class="msg">${esc(params.message)}</div>
             ${addr}
             <p class="warn">Signing moves no assets. It proves you control the address above.</p>`;
+    } else if (method === "swapPrepare" || method === "swapSign") {
+        // What the offer says, read here from the platform rather than from the page: the page
+        // asked for this window, so it is not a source for what the window shows.
+        let offer = null;
+        try {
+            const res = await fetch(`${params.apiBase.replace(/\/+$/, "")}/v1/p2p/offers/${encodeURIComponent(params.offerId)}`);
+            if (res.ok) offer = await res.json();
+        } catch { /* shown as unavailable below */ }
+        const detail = offer
+            ? `<div class="msg">Buy <b>${esc(offer.amount)}</b> of<br>${esc(offer.assetId)}<br>for <b>${esc(offer.priceSats)}</b> sats</div>`
+            : `<p class="err">The offer could not be read from ${esc(params.apiBase)}</p>`;
+        if (method === "swapPrepare") {
+            $("body").innerHTML = `<h2>Prepare a swap</h2>${who}${detail}
+                <p class="muted">This opens an invoice of your wallet and picks a UTXO to pay with. Nothing is signed and nothing moves yet.</p>`;
+        } else {
+            $("body").innerHTML = `<h2>Sign and broadcast a swap</h2>${who}${detail}
+                <p class="warn">Your sats and the asset change hands in one transaction: either both or neither. The wallet checks every output against the offer before signing, and refuses if anything differs.</p>
+                <p class="muted">Wait for one confirmation before treating the asset as received.</p>`;
+        }
     } else {
         $("body").innerHTML = `<h2>Unknown request</h2>${who}<p class="err">${esc(method)}</p>`;
     }

@@ -8,7 +8,7 @@
 import init, { generateKeys, restoreKeys, WasmWallet, WasmInvoice } from "./pkg/rgb_lib_wasm_bindings.js";
 import { unseal, seal } from "./lib/vault.js";
 import { listen, plain } from "./lib/msg.js";
-import { buildToSignPsbt, extractWitness, signatureFromWitness, decodeAddress, hex } from "./lib/bip322.js";
+import { buildToSignPsbt, extractWitness, signatureFromWitness, decodeAddress, scriptPubKeyOf, hex } from "./lib/bip322.js";
 import { DEFAULTS, NETWORKS } from "./config.js";
 import { clearingRate, bid } from "./lib/fee.js";
 import { slotBlocker, slotsToCreate, explainSendError } from "./lib/slots.js";
@@ -110,6 +110,34 @@ function needOnline() {
     needWallet();
     if (!S.online) throw new Error(`Indexer unreachable${S.onlineErr ? ": " + S.onlineErr : ""}`);
     return S.online;
+}
+
+/** Sats parked on the seal output a swap pays the buyer. rgb-lib's own UTXO size. */
+const SWAP_SEAL_SATS = 1000;
+
+/** One offer, from the platform's public endpoint. Read here, never taken from the page. */
+async function platformOffer(apiBase, offerId) {
+    const base = String(apiBase || "").replace(/\/+$/, "");
+    if (!/^https:\/\//.test(base)) throw new Error("The platform endpoint must be https");
+    const r = await fetch(`${base}/v1/p2p/offers/${encodeURIComponent(String(offerId))}`);
+    const body = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(body?.error?.message || `offer ${r.status}`);
+    return body;
+}
+
+/**
+ * The counterparty's input, read out of the PSBT.
+ *
+ * Which UTXO the seller spends is its own business; what matters is that there are exactly two
+ * inputs and that one of them is this wallet's. The asset arriving is guaranteed by the
+ * consignment, not by the seller's choice of input.
+ */
+function psbtSellerInput(psbt, mine) {
+    const inputs = plain(WasmWallet.swapPsbtInputs(psbt));
+    if (inputs.length !== 2) throw new Error(`A swap has two inputs, this PSBT has ${inputs.length}`);
+    const others = inputs.filter((i) => i !== mine);
+    if (others.length !== 1) throw new Error("The PSBT does not spend this wallet's prepared UTXO");
+    return others[0];
 }
 
 /** Free colored allocation slots. Receiving needs at least one. */
@@ -310,6 +338,116 @@ const handlers = {
         const address = w.getAddress();
         const { version, program } = decodeAddress(address);
         return { address, publicKey: hex.to(program), witnessVersion: version, network: S.network };
+    },
+
+    /**
+     * The buyer's half of a peer-to-peer swap, step one (platform `docs/design/20`).
+     *
+     * A swap moves an RGB asset one way and sats the other in a single bitcoin transaction. This
+     * call produces what the page needs to take an offer, and remembers it so step two can check
+     * what comes back:
+     *
+     *   - a **witness** invoice of this wallet, so the asset lands on a seal it owns. A blind
+     *     invoice cannot receive from a swap: colouring assigns the asset to an output of the
+     *     swap transaction itself.
+     *   - a **vanilla** UTXO to pay with. A colored one would be spent without a state transition
+     *     for what it carries, destroying it.
+     *   - the change script, so step two can tell its own change from an output redirected
+     *     somewhere else.
+     *
+     * The page performs the platform calls; it holds the session. This wallet holds the keys and
+     * decides what it signs.
+     */
+    async swapPrepare({ offerId, apiBase }) {
+        const w = needWallet();
+        const on = needOnline();
+        const { proxy } = endpoints(S.settings);
+        if (!proxy) throw new Error("No RGB proxy configured. The consignment needs somewhere to arrive.");
+        const offer = await platformOffer(apiBase, offerId);
+        if (offer.state && offer.state !== "OPEN") throw new Error(`The offer is ${offer.state}`);
+
+        if (freeSlots(w) < 1) throw new Error("No free allocation slot. Create slots first.");
+        const recv = plain(w.witnessReceive(
+            undefined,                          // the contract is unknown until the consignment arrives
+            { Fungible: Number(offer.amount) },
+            DEFAULTS.invoiceMinutes * 60,
+            [proxy],
+            DEFAULTS.minConfirmations,
+        ));
+        await w.flush();
+        const seal = WasmWallet.invoiceSealScript(recv.invoice);
+
+        // ~300 vB for a swap (two inputs, four outputs), measured on the platform side.
+        const feeSats = Number(await feeRate_()) * 320;
+        const need = Number(offer.priceSats) + feeSats + SWAP_SEAL_SATS;
+        const vanilla = plain(w.listUnspentsVanilla(on, DEFAULTS.minConfirmations, false))
+            .filter((u) => !u.utxo.colorable && Number(u.utxo.btcAmount) > need)
+            .sort((a, b) => Number(a.utxo.btcAmount) - Number(b.utxo.btcAmount))[0];
+        if (!vanilla) throw new Error(`No vanilla UTXO holding more than ${need} sats`);
+
+        const changeScript = hex(scriptPubKeyOf(w.getAddress()));
+        const prepared = {
+            offerId,
+            assetId: offer.assetId,
+            amount: String(offer.amount),
+            priceSats: String(offer.priceSats),
+            buyerInvoice: recv.invoice,
+            buyerSeal: seal,
+            buyerOutpoint: `${vanilla.utxo.outpoint.txid}:${vanilla.utxo.outpoint.vout}`,
+            buyerInputSats: String(vanilla.utxo.btcAmount),
+            buyerChangeScript: changeScript,
+            feeSats: String(feeSats),
+        };
+        S.swaps = S.swaps || new Map();
+        S.swaps.set(String(offerId), prepared);
+        return prepared;
+    },
+
+    /**
+     * The buyer's half, step two: check the counterparty's half-signed PSBT, sign it, broadcast.
+     *
+     * 🚨 The check is the whole defence. A signature covers every output, so an output redirected
+     * before signing is authorised by that signature and cannot be disputed afterwards. What is
+     * compared: both inputs, every output's script and value in the fixed order, the RGB
+     * commitment being output 0, and the fee.
+     *
+     * The seller's payout script is not compared; only its value is. The buyer agreed to a price,
+     * not to where the seller keeps it. The commitment output's content comes from the seller's
+     * colouring and cannot be recomputed here, so only its shape and position are checked.
+     */
+    async swapSign({ offerId, psbt, apiBase }) {
+        const w = needWallet();
+        const on = needOnline();
+        const prepared = S.swaps?.get(String(offerId));
+        if (!prepared) throw new Error("This wallet did not prepare that swap");
+        // Re-read the offer rather than trusting anything the page passed in.
+        const offer = await platformOffer(apiBase, offerId);
+        if (String(offer.amount) !== prepared.amount || String(offer.priceSats) !== prepared.priceSats) {
+            throw new Error("The offer changed after it was prepared");
+        }
+
+        const price = Number(prepared.priceSats);
+        const fee = Number(prepared.feeSats);
+        const change = Number(prepared.buyerInputSats) - SWAP_SEAL_SATS - price - fee;
+        if (change < 0) throw new Error("The prepared input no longer covers the price and the fee");
+        WasmWallet.checkSwapPsbt(
+            psbt,
+            [psbtSellerInput(psbt, prepared.buyerOutpoint), prepared.buyerOutpoint],
+            [
+                { script: null, sats: 0 },                              // the RGB commitment
+                { script: prepared.buyerSeal, sats: SWAP_SEAL_SATS },   // the asset arrives here
+                { script: null, sats: price },                          // the seller's payout
+                { script: prepared.buyerChangeScript, sats: change },   // this wallet's change
+            ],
+            fee,
+        );
+
+        const signed = w.signPsbt(psbt);
+        const finalized = w.finalizePsbt(signed);
+        const txid = await w.broadcastPsbt(on, finalized);
+        S.swaps.delete(String(offerId));
+        await w.flush();
+        return { offerId, txid, assetId: prepared.assetId, amount: prepared.amount, priceSats: prepared.priceSats };
     },
 
     /**

@@ -40,6 +40,22 @@ export class WasmWallet {
      */
     blindReceive(asset_id: string | null | undefined, assignment_js: any, duration_seconds: number | null | undefined, transport_endpoints_js: any, min_confirmations: number): any;
     /**
+     * Broadcast a finalized PSBT. Returns the transaction id.
+     *
+     * For a transaction this wallet did not build, which is the swap case.
+     */
+    broadcastPsbt(online_js: any, finalized_psbt: string): Promise<string>;
+    /**
+     * Check a swap PSBT against what this wallet agreed to, before signing it.
+     *
+     * `inputs` is an array of `"txid:vout"`, `outputs` an array of `{ script, sats }` in order,
+     * index 0 being the RGB commitment output.
+     *
+     * 🚨 Call this **before** signing. A signature covers every output, so a rewritten output
+     * discovered afterwards is already authorised.
+     */
+    static checkSwapPsbt(psbt: string, inputs_js: any, outputs_js: any, fee_sats: bigint): void;
+    /**
      * Configure VSS (cloud) backup for this wallet.
      *
      * `signing_key_hex` is the 32-byte secret key as a hex string (64 hex chars).
@@ -140,6 +156,13 @@ export class WasmWallet {
      */
     inflateEnd(online_js: any, signed_psbt: string): Promise<any>;
     /**
+     * The script a witness invoice pays to, hex-encoded.
+     *
+     * A receiver needs it to check that a swap transaction really pays its own seal: rgb-lib does
+     * not expose the script, and the invoice's recipient id is not one.
+     */
+    static invoiceSealScript(invoice: string): string;
+    /**
      * Issue a new IFA (Inflatable Fungible Asset).
      *
      * `amounts_js` is a JS array of u64 values.
@@ -215,6 +238,10 @@ export class WasmWallet {
      */
     signPsbt(unsigned_psbt: string): string;
     /**
+     * The outpoints a PSBT spends, as `"txid:vout"`.
+     */
+    static swapPsbtInputs(psbt: string): any;
+    /**
      * Sync the wallet with the indexer.
      *
      * Incremental: re-queries only already-revealed SPKs. Use `fullScan` to recover a thin
@@ -276,6 +303,8 @@ export interface InitOutput {
     readonly wasmwallet_backup: (a: number, b: number, c: number) => [number, number, number, number];
     readonly wasmwallet_backupInfo: (a: number) => [number, number, number];
     readonly wasmwallet_blindReceive: (a: number, b: number, c: number, d: any, e: number, f: any, g: number) => [number, number, number];
+    readonly wasmwallet_broadcastPsbt: (a: number, b: any, c: number, d: number) => any;
+    readonly wasmwallet_checkSwapPsbt: (a: number, b: number, c: any, d: any, e: bigint) => [number, number];
     readonly wasmwallet_configureVssBackup: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly wasmwallet_create: (a: number, b: number) => any;
     readonly wasmwallet_createUtxosBegin: (a: number, b: any, c: number, d: number, e: number, f: bigint, g: number) => any;
@@ -297,6 +326,7 @@ export interface InitOutput {
     readonly wasmwallet_goOnline: (a: number, b: number, c: number, d: number) => any;
     readonly wasmwallet_inflateBegin: (a: number, b: any, c: number, d: number, e: any, f: bigint, g: number) => any;
     readonly wasmwallet_inflateEnd: (a: number, b: any, c: number, d: number) => any;
+    readonly wasmwallet_invoiceSealScript: (a: number, b: number) => [number, number, number, number];
     readonly wasmwallet_issueAssetIfa: (a: number, b: number, c: number, d: number, e: number, f: number, g: any, h: any, i: number, j: number) => [number, number, number];
     readonly wasmwallet_issueAssetNia: (a: number, b: number, c: number, d: number, e: number, f: number, g: any) => [number, number, number];
     readonly wasmwallet_listAssets: (a: number, b: any) => [number, number, number];
@@ -313,6 +343,7 @@ export interface InitOutput {
     readonly wasmwallet_sendBtcEnd: (a: number, b: any, c: number, d: number, e: number) => any;
     readonly wasmwallet_sendEnd: (a: number, b: any, c: number, d: number, e: number) => any;
     readonly wasmwallet_signPsbt: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly wasmwallet_swapPsbtInputs: (a: number, b: number) => [number, number, number];
     readonly wasmwallet_sync: (a: number, b: any) => any;
     readonly wasmwallet_vssBackup: (a: number) => any;
     readonly wasmwallet_vssBackupInfo: (a: number) => any;
@@ -323,12 +354,12 @@ export interface InitOutput {
     readonly rustsecp256k1_v0_10_0_default_illegal_callback_fn: (a: number, b: number) => void;
     readonly rustsecp256k1_v0_10_0_context_destroy: (a: number) => void;
     readonly rustsecp256k1_v0_10_0_context_create: (a: number) => number;
-    readonly wasm_bindgen_9ab5946d8b43d44a___convert__closures_____invoke___wasm_bindgen_9ab5946d8b43d44a___JsValue__core_f0fd674eaa06beef___result__Result_____wasm_bindgen_9ab5946d8b43d44a___JsError___true_: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen_9ab5946d8b43d44a___convert__closures_____invoke___js_sys_ffa0e676d0db9fe2___Function_fn_wasm_bindgen_9ab5946d8b43d44a___JsValue_____wasm_bindgen_9ab5946d8b43d44a___sys__Undefined___js_sys_ffa0e676d0db9fe2___Function_fn_wasm_bindgen_9ab5946d8b43d44a___JsValue_____wasm_bindgen_9ab5946d8b43d44a___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
-    readonly wasm_bindgen_9ab5946d8b43d44a___convert__closures_____invoke___web_sys_b7150d5aae6a78a___features__gen_Event__Event______true_: (a: number, b: number, c: any) => void;
-    readonly wasm_bindgen_9ab5946d8b43d44a___convert__closures_____invoke___web_sys_b7150d5aae6a78a___features__gen_IdbVersionChangeEvent__IdbVersionChangeEvent______true_: (a: number, b: number, c: any) => void;
-    readonly wasm_bindgen_9ab5946d8b43d44a___convert__closures_____invoke_______true_: (a: number, b: number) => void;
-    readonly wasm_bindgen_9ab5946d8b43d44a___convert__closures_____invoke_______true__1_: (a: number, b: number) => void;
+    readonly wasm_bindgen_fbfb77f5f81cea49___convert__closures_____invoke___wasm_bindgen_fbfb77f5f81cea49___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_fbfb77f5f81cea49___JsError___true_: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_fbfb77f5f81cea49___convert__closures_____invoke___js_sys_c84eb9a3aa788e7b___Function_fn_wasm_bindgen_fbfb77f5f81cea49___JsValue_____wasm_bindgen_fbfb77f5f81cea49___sys__Undefined___js_sys_c84eb9a3aa788e7b___Function_fn_wasm_bindgen_fbfb77f5f81cea49___JsValue_____wasm_bindgen_fbfb77f5f81cea49___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen_fbfb77f5f81cea49___convert__closures_____invoke___web_sys_a631e2897884c5f1___features__gen_Event__Event______true_: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen_fbfb77f5f81cea49___convert__closures_____invoke___web_sys_a631e2897884c5f1___features__gen_IdbVersionChangeEvent__IdbVersionChangeEvent______true_: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen_fbfb77f5f81cea49___convert__closures_____invoke_______true_: (a: number, b: number) => void;
+    readonly wasm_bindgen_fbfb77f5f81cea49___convert__closures_____invoke_______true__1_: (a: number, b: number) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
