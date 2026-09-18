@@ -146,6 +146,27 @@ function psbtSellerInput(psbt, mine) {
     return others[0];
 }
 
+/**
+ * Whether the proxy already holds a consignment for `recipientId`. It refuses a second one for
+ * the same id, so a swap naming a used id cannot complete. Unreachable is an error, not a no:
+ * guessing "free" is what fails the swap later.
+ */
+async function proxyHasConsignment(proxy, recipientId) {
+    const url = String(proxy).replace(/^rpcs:\/\//, "https://").replace(/^rpc:\/\//, "http://");
+    const r = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "consignment.get", params: { recipient_id: recipientId } }),
+        signal: AbortSignal.timeout(8000),
+    });
+    if (!r.ok) throw new Error(`RGB proxy ${r.status}`);
+    const body = await r.json();
+    if (body.result?.consignment) return true;
+    // -400 "Consignment file not found": the id is free.
+    if (body.error?.code === -400) return false;
+    throw new Error(`RGB proxy: ${body.error?.message || "unexpected reply"}`);
+}
+
 /** The value of `txid:vout`, from the configured indexer. */
 async function outputSats(outpoint) {
     const [txid, vout] = String(outpoint).split(":");
@@ -397,13 +418,26 @@ const handlers = {
         // NOTE: no free slot is needed. A witness invoice names an output of the swap transaction
         // itself, not a UTXO this wallet already has. Opened after the input is found, so a
         // wallet that cannot pay leaves no invoice behind.
-        const recv = plain(w.witnessReceive(
-            undefined,                          // the contract is unknown until the consignment arrives
-            { Fungible: Number(offer.amount) },
-            DEFAULTS.invoiceMinutes * 60,
-            [proxy],
-            DEFAULTS.minConfirmations,
-        ));
+        // 🚨 A colored address no earlier swap used. Addresses are pinned (reuseAddresses), so
+        // without rotating every swap names the same seal script and so the same recipient id,
+        // and the proxy refuses the second consignment for it ("Cannot change uploaded file").
+        // Rotating once is not enough: a wallet restored from its phrase starts the index again,
+        // and a swap that expired unbroadcast leaves no trace on-chain, only on the proxy. So the
+        // proxy is asked. Only the colored keychain (0) rotates; the identity address is on the
+        // vanilla one and does not change. The index is saved with the wallet snapshot.
+        let recv = null;
+        for (let i = 0; i < 20 && !recv; i++) {
+            w.rotateAddress(0);
+            const r = plain(w.witnessReceive(
+                undefined,                          // the contract is unknown until the consignment arrives
+                { Fungible: Number(offer.amount) },
+                DEFAULTS.invoiceMinutes * 60,
+                [proxy],
+                DEFAULTS.minConfirmations,
+            ));
+            if (!(await proxyHasConsignment(proxy, r.recipientId ?? r.recipient_id))) recv = r;
+        }
+        if (!recv) throw new Error("Could not find an unused receiving address. Try again later.");
         await w.flush();
         const seal = WasmWallet.invoiceSealScript(recv.invoice);
 

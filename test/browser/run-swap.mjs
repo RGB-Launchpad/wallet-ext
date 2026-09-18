@@ -6,6 +6,8 @@
 //     python3 test/browser/serve.py &
 //     PLAYWRIGHT=<path to index.mjs> node test/browser/run-swap.mjs <offerId>
 //     ABANDON=1 …   stop once the seller has signed and let the session expire
+//     MNEMONIC=… …  restore the wallet an earlier run printed
+//     PREPARE_ONLY=1 …  stop after swapPrepare; the offer is read, not taken
 //
 // 🚨 Regtest only. Needs ssh to the server (RGB_SERVER, via deploy/_local.sh) to fund the wallet,
 // mint a session and mine. Consumes the offer.
@@ -46,7 +48,10 @@ const must = async (cmd, args) => { const r = await call(cmd, args); if (!r.ok) 
 
 step("create a regtest wallet");
 const settings = { network: "Regtest" };
-await must("create", { password: "probe-password", settings });
+// MNEMONIC=<phrase> restores a wallet an earlier run used. Its colored address index starts
+// again, so the first address tried is one that run's swap already named on the proxy.
+const created = await must("create", { password: "probe-password", settings, mnemonic: process.env.MNEMONIC });
+if (created.mnemonic) console.log(`mnemonic: ${created.mnemonic}`);
 const { address } = await must("identity");
 
 step("fund it with 0.002 BTC and confirm");
@@ -61,6 +66,9 @@ for (let i = 0; ; i++) {
 
 step("swapPrepare");
 const prepared = await must("swapPrepare", { offerId, apiBase: API, network: "regtest" });
+console.log("recipient", prepared.buyerInvoice.match(/wvout:([^?]+)/)?.[1]);
+// PREPARE_ONLY=1 stops before taking the offer: swapPrepare reads the offer but reserves nothing.
+if (process.env.PREPARE_ONLY) { await b.close(); console.log("\nPREPARED"); process.exit(0); }
 
 step("take the offer");
 const token = JSON.parse(sh(`bash deploy/server.sh dev tools session ${address}`)).token;
