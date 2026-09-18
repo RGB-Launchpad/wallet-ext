@@ -80,6 +80,23 @@ const RGB_ERR = {
     other: (m) => ({ code: 4900, message: String(m) }),
 };
 
+/**
+ * A platform endpoint on the calling site, as an absolute URL, or `null`.
+ *
+ * Accepts a path or an absolute URL and resolves both against `origin`; anything landing on
+ * another host is refused. NOTE: http passes only for localhost, so a site served over plain
+ * http cannot have this wallet read an offer a network attacker can rewrite.
+ */
+function sameOriginBase(value, origin) {
+    if (typeof value !== "string" || !value) return null;
+    let url;
+    try { url = new URL(value, origin); } catch { return null; }
+    if (url.origin !== new URL(origin).origin) return null;
+    const local = url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    if (url.protocol !== "https:" && !(url.protocol === "http:" && local)) return null;
+    return url.toString().replace(/\/+$/, "");
+}
+
 const getSites = async () => (await chrome.storage.local.get("sites")).sites || {};
 const isAuthorized = async (origin) => !!(await getSites())[origin];
 
@@ -122,9 +139,14 @@ async function providerCall({ method, params }, origin) {
         if (typeof params?.offerId !== "string" || !params.offerId) {
             return ok({ error: RGB_ERR.other("offerId is required") });
         }
-        if (typeof params?.apiBase !== "string" || !/^https:\/\//.test(params.apiBase)) {
-            return ok({ error: RGB_ERR.other("apiBase must be an https URL") });
+        // Resolved against the calling site, not taken as given. A page that could name the host
+        // could point this wallet at an endpoint it also controls, and then "the wallet fetches
+        // the offer itself" would check the page's own answer against the page's own PSBT.
+        const apiBase = sameOriginBase(params?.apiBase, origin);
+        if (!apiBase) {
+            return ok({ error: RGB_ERR.other("apiBase must be a path or URL on this site") });
         }
+        params = { ...params, apiBase };
         if (method === "swapSign" && (typeof params?.psbt !== "string" || !params.psbt)) {
             return ok({ error: RGB_ERR.other("psbt is required") });
         }

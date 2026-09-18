@@ -10,6 +10,10 @@ window.addEventListener("message", async (ev) => {
     try {
         const r = await chrome.runtime.sendMessage({ to: "sw", cmd: "provider", args: { method, params } });
         if (!r?.ok) { reply(id, { error: r?.error || { code: 4900, message: r?.err || "No response from wallet" } }); return; }
+        // A refusal the worker decided on the spot (bad parameters, locked, not authorized) rides
+        // inside a successful envelope. Without this the page resolves with `undefined` and the
+        // reason is lost, which reads as a bug in the page rather than a refusal by the wallet.
+        if (r.data?.error) { reply(id, { error: r.data.error }); return; }
 
         // Approval requests: the service worker opened the window; poll for the result.
         // Polling rather than a long-lived callback, because the worker is evicted after 30s

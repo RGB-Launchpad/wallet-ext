@@ -117,8 +117,13 @@ const SWAP_SEAL_SATS = 1000;
 
 /** One offer, from the platform's public endpoint. Read here, never taken from the page. */
 async function platformOffer(apiBase, offerId) {
+    // NOTE: the service worker has already resolved this against the calling site and refused
+    // anything else. Repeated here because this document must not read an offer over plain http
+    // whatever reaches it: a rewritten offer is what the signature is checked against.
     const base = String(apiBase || "").replace(/\/+$/, "");
-    if (!/^https:\/\//.test(base)) throw new Error("The platform endpoint must be https");
+    if (!/^https:\/\//.test(base) && !/^http:\/\/(localhost|127\.0\.0\.1)([:/]|$)/.test(base)) {
+        throw new Error("The platform endpoint must be https");
+    }
     const r = await fetch(`${base}/v1/p2p/offers/${encodeURIComponent(String(offerId))}`);
     const body = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(body?.error?.message || `offer ${r.status}`);
