@@ -5,6 +5,7 @@
 //
 //     python3 test/browser/serve.py &
 //     PLAYWRIGHT=<path to index.mjs> node test/browser/run-swap.mjs <offerId>
+//     ABANDON=1 …   stop once the seller has signed and let the session expire
 //
 // 🚨 Regtest only. Needs ssh to the server (RGB_SERVER, via deploy/_local.sh) to fund the wallet,
 // mint a session and mine. Consumes the offer.
@@ -84,6 +85,9 @@ for (let i = 0; i < 60 && !psbt; i++) {
     else await sleep(2000);
 }
 if (!psbt) die("the seller did not sign within two minutes");
+// ABANDON=1 stops here and lets the session expire, so the next run colours the same allocation
+// a second time: the path where a stale consignment used to reach the buyer.
+if (process.env.ABANDON) { await b.close(); console.log(`\nABANDONED  session ${taken.sessionId} will expire`); process.exit(0); }
 
 step("swapSign");
 const signed = await must("swapSign", { offerId, psbt, apiBase: API });
