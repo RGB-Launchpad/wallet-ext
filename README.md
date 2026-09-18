@@ -245,7 +245,7 @@ own signature:
 | Addition | Why it is needed |
 |---|---|
 | `WasmWallet.invoiceSealScript(invoice)` | The script a witness invoice pays to. rgb-lib does not expose it, and a receiver cannot otherwise tell whether a transaction pays its own seal. |
-| `WasmWallet.checkSwapPsbt(psbt, inputs, outputs, feeSats)` | Compares a PSBT with what this wallet agreed to, before signing. An expected script may be `null` to check the value only. |
+| `WasmWallet.checkSwapPsbt(psbt, inputs, outputs, feeSats)` | Compares a PSBT with what this wallet agreed to, before signing. An expected script may be `null` to check the value only. It also refuses any input asking for a sighash other than ALL: such a signature stays valid over rewritten outputs, so the counterparty could redirect the sats afterwards and re-sign only its own input. |
 | `WasmWallet.swapPsbtInputs(psbt)` | The outpoints a PSBT spends, to tell this wallet's input from the counterparty's. |
 | `wallet.broadcastPsbt(online, finalizedPsbt)` | Broadcasts a transaction this wallet did not build. |
 
