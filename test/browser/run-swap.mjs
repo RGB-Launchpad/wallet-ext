@@ -1,0 +1,103 @@
+// The buyer half of a peer-to-peer swap, end to end against the regtest server: the shipped
+// offscreen.js prepares, the platform's daemon colours and signs, offscreen.js checks, signs and
+// broadcasts, and the asset lands in the wallet. What the page would do (take, poll, report) is
+// done here with a dev session.
+//
+//     python3 test/browser/serve.py &
+//     PLAYWRIGHT=<path to index.mjs> node test/browser/run-swap.mjs <offerId>
+//
+// 🚨 Regtest only. Needs ssh to the server (RGB_SERVER, via deploy/_local.sh) to fund the wallet,
+// mint a session and mine. Consumes the offer.
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+const offerId = process.argv[2];
+if (!offerId) { console.error("usage: run-swap.mjs <offerId>"); process.exit(2); }
+let chromium;
+try { ({ chromium } = await import(process.env.PLAYWRIGHT || "playwright")); }
+catch { console.error("playwright not found: npm i playwright, or set PLAYWRIGHT=<path to index.mjs>"); process.exit(2); }
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+const API = "https://rgblaunchpad.meme/api/regtest/trade";
+const sh = (script) => execFileSync("bash", ["-c", `. deploy/_local.sh && need_local RGB_SERVER && ${script}`],
+    { cwd: ROOT, encoding: "utf8" }).trim();
+const bcli = (...a) => sh(`ssh -o BatchMode=yes "$RGB_SERVER" docker exec rgb-regtest-bitcoind-1 bitcoin-cli -regtest -datadir=/srv/app/.bitcoin -rpcwallet=miner ${a.join(" ")}`);
+const mine = () => bcli("-generate", "1");
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const step = (s) => console.log(`\n== ${s}`);
+const die = (m) => { console.log(`FAIL  ${m}`); process.exit(1); };
+
+// Chrome grants the extension host access; a test page has none, so CORS is switched off.
+const b = await chromium.launch({ args: ["--disable-web-security"] });
+const p = await (await b.newContext()).newPage();
+// The engine logs why it refuses a consignment to the console and nowhere else.
+p.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") console.log(`[${m.type()}]`, m.text().slice(0, 400)); });
+p.on("pageerror", (e) => console.log("[pageerror]", String(e).slice(0, 300)));
+await p.goto("http://127.0.0.1:8777/test/browser/swap-probe.html");
+await p.waitForFunction(() => document.title === "ready", null, { timeout: 60000 });
+const call = async (cmd, args) => {
+    const r = await p.evaluate(([c, a]) => window.call(c, a), [cmd, args]);
+    console.log(`${cmd} ->`, JSON.stringify(r).slice(0, 600));
+    return r;
+};
+const must = async (cmd, args) => { const r = await call(cmd, args); if (!r.ok) die(`${cmd}: ${r.err}`); return r.data; };
+
+step("create a regtest wallet");
+const settings = { network: "Regtest" };
+await must("create", { password: "probe-password", settings });
+const { address } = await must("identity");
+
+step("fund it with 0.002 BTC and confirm");
+console.log("txid", bcli("sendtoaddress", address, "0.002"));
+mine();
+for (let i = 0; ; i++) {
+    await sleep(3000);
+    const bal = await must("btc");
+    if (BigInt(bal.balance.vanilla.settled) > 0n) break;
+    if (i > 20) die("the funding never settled");
+}
+
+step("swapPrepare");
+const prepared = await must("swapPrepare", { offerId, apiBase: API, network: "regtest" });
+
+step("take the offer");
+const token = JSON.parse(sh(`bash deploy/server.sh dev tools session ${address}`)).token;
+const api = async (method, p_, body) => {
+    const r = await fetch(`${API}${p_}`, { method, headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        body: body && JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) die(`${method} ${p_} ${r.status} ${JSON.stringify(j)}`);
+    return j;
+};
+const { buyerInvoice, buyerSeal, buyerOutpoint, buyerInputSats, buyerChangeScript, feeSats } = prepared;
+const taken = await api("POST", `/v1/p2p/offers/${offerId}/take`, {
+    clientRequestId: `probe-${Date.now()}`, buyerInvoice, buyerSeal, buyerOutpoint, buyerInputSats, buyerChangeScript, feeSats });
+console.log("take ->", JSON.stringify(taken));
+
+step("wait for the seller's PSBT");
+let psbt = null;
+for (let i = 0; i < 60 && !psbt; i++) {
+    const s = await api("GET", `/v1/p2p/sessions/${taken.sessionId}`);
+    if (s.psbt) psbt = s.psbt;
+    else if (s.state !== "MATCHED") die(`session is ${s.state}`);
+    else await sleep(2000);
+}
+if (!psbt) die("the seller did not sign within two minutes");
+
+step("swapSign");
+const signed = await must("swapSign", { offerId, psbt, apiBase: API });
+await api("POST", `/v1/p2p/sessions/${taken.sessionId}/broadcast`, { txid: signed.txid });
+
+step("confirm and pick up the asset");
+mine();
+let got = null;
+for (let i = 0; i < 20 && !got; i++) {
+    await sleep(4000);
+    await call("refresh");
+    const { assets } = await must("assets");
+    got = assets.find((a) => a.assetId === prepared.assetId && BigInt(a.balance?.settled ?? 0) > 0n) || null;
+}
+await b.close();
+if (!got) die("the asset did not settle in the wallet");
+console.log(`\nPASS  ${offerId}: bought ${got.balance.settled} of ${got.assetId}, txid ${signed.txid}`);

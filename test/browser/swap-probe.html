@@ -1,0 +1,12 @@
+<!doctype html><meta charset="utf-8"><title>swap probe</title><pre id="out">loading…</pre>
+<script>
+// The real offscreen.js, driven through its own message listener. `chrome.runtime` is stubbed
+// before the module loads, so the handlers under test are the shipped ones, not a copy.
+let listener = null;
+window.chrome = { runtime: { onMessage: { addListener(fn) { listener = fn; } } } };
+window.call = (cmd, args = {}) => new Promise((res) => listener({ to: "offscreen", cmd, args }, {}, res));
+</script>
+<script type="module">
+await import("../../offscreen.js");
+document.title = "ready";
+</script>

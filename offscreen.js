@@ -13,6 +13,7 @@ import { DEFAULTS, NETWORKS } from "./config.js";
 import { clearingRate, bid } from "./lib/fee.js";
 import { slotBlocker, slotsToCreate, explainSendError } from "./lib/slots.js";
 import { dataDirOf } from "./lib/chain.js";
+import { pickSwapInput } from "./lib/swap.js";
 
 const S = {
     wallet: null,
@@ -143,6 +144,17 @@ function psbtSellerInput(psbt, mine) {
     const others = inputs.filter((i) => i !== mine);
     if (others.length !== 1) throw new Error("The PSBT does not spend this wallet's prepared UTXO");
     return others[0];
+}
+
+/** The value of `txid:vout`, from the configured indexer. */
+async function outputSats(outpoint) {
+    const [txid, vout] = String(outpoint).split(":");
+    const base = endpoints(S.settings).esplora.replace(/\/+$/, "");
+    const r = await fetch(`${base}/tx/${txid}`, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error(`Cannot read the seller's input ${outpoint}: indexer ${r.status}`);
+    const out = (await r.json()).vout?.[Number(vout)];
+    if (!Number.isSafeInteger(out?.value)) throw new Error(`The seller's input ${outpoint} does not exist`);
+    return out.value;
 }
 
 /** Free colored allocation slots. Receiving needs at least one. */
@@ -363,15 +375,28 @@ const handlers = {
      * The page performs the platform calls; it holds the session. This wallet holds the keys and
      * decides what it signs.
      */
-    async swapPrepare({ offerId, apiBase }) {
+    async swapPrepare({ offerId, apiBase, network }) {
         const w = needWallet();
+        // The site names its network in lower case. Checked first: on another network the offer
+        // cannot be paid, and the invoice below would name the wrong chain.
+        if (typeof network === "string" && network.toLowerCase() !== String(S.network).toLowerCase()) {
+            throw new Error(`This wallet is on ${S.network} and the site is on ${network}. Switch the network in the wallet's settings.`);
+        }
         const on = needOnline();
         const { proxy } = endpoints(S.settings);
         if (!proxy) throw new Error("No RGB proxy configured. The consignment needs somewhere to arrive.");
         const offer = await platformOffer(apiBase, offerId);
         if (offer.state && offer.state !== "OPEN") throw new Error(`The offer is ${offer.state}`);
 
-        if (freeSlots(w) < 1) throw new Error("No free allocation slot. Create slots first.");
+        // ~300 vB for a swap (two inputs, four outputs), measured on the platform side.
+        const feeSats = Number(await feeRate_()) * 320;
+        const need = Number(offer.priceSats) + feeSats + SWAP_SEAL_SATS;
+        const vanilla = pickSwapInput(plain(await w.listUnspentsVanilla(on, DEFAULTS.minConfirmations, false)), need);
+        if (!vanilla) throw new Error(`No confirmed Bitcoin output holding more than ${need} sats. Fund the wallet's Bitcoin address.`);
+
+        // NOTE: no free slot is needed. A witness invoice names an output of the swap transaction
+        // itself, not a UTXO this wallet already has. Opened after the input is found, so a
+        // wallet that cannot pay leaves no invoice behind.
         const recv = plain(w.witnessReceive(
             undefined,                          // the contract is unknown until the consignment arrives
             { Fungible: Number(offer.amount) },
@@ -382,15 +407,7 @@ const handlers = {
         await w.flush();
         const seal = WasmWallet.invoiceSealScript(recv.invoice);
 
-        // ~300 vB for a swap (two inputs, four outputs), measured on the platform side.
-        const feeSats = Number(await feeRate_()) * 320;
-        const need = Number(offer.priceSats) + feeSats + SWAP_SEAL_SATS;
-        const vanilla = plain(w.listUnspentsVanilla(on, DEFAULTS.minConfirmations, false))
-            .filter((u) => !u.utxo.colorable && Number(u.utxo.btcAmount) > need)
-            .sort((a, b) => Number(a.utxo.btcAmount) - Number(b.utxo.btcAmount))[0];
-        if (!vanilla) throw new Error(`No vanilla UTXO holding more than ${need} sats`);
-
-        const changeScript = hex(scriptPubKeyOf(w.getAddress()));
+        const changeScript = hex.to(scriptPubKeyOf(w.getAddress()));
         const prepared = {
             offerId,
             assetId: offer.assetId,
@@ -398,8 +415,8 @@ const handlers = {
             priceSats: String(offer.priceSats),
             buyerInvoice: recv.invoice,
             buyerSeal: seal,
-            buyerOutpoint: `${vanilla.utxo.outpoint.txid}:${vanilla.utxo.outpoint.vout}`,
-            buyerInputSats: String(vanilla.utxo.btcAmount),
+            buyerOutpoint: vanilla.outpoint,
+            buyerInputSats: vanilla.sats,
             buyerChangeScript: changeScript,
             feeSats: String(feeSats),
         };
@@ -433,18 +450,23 @@ const handlers = {
 
         const price = Number(prepared.priceSats);
         const fee = Number(prepared.feeSats);
-        const change = Number(prepared.buyerInputSats) - SWAP_SEAL_SATS - price - fee;
+        const sellerIn = psbtSellerInput(psbt, prepared.buyerOutpoint);
+        // The seller's colored input funds the seal output alongside the buyer's, so the buyer's
+        // change is what both inputs hold minus the layout. Its value is read from this wallet's
+        // own indexer, not from the PSBT the counterparty built.
+        const change = Number(prepared.buyerInputSats) + await outputSats(sellerIn)
+            - SWAP_SEAL_SATS - price - fee;
         if (change < 0) throw new Error("The prepared input no longer covers the price and the fee");
         WasmWallet.checkSwapPsbt(
             psbt,
-            [psbtSellerInput(psbt, prepared.buyerOutpoint), prepared.buyerOutpoint],
+            [sellerIn, prepared.buyerOutpoint],
             [
                 { script: null, sats: 0 },                              // the RGB commitment
                 { script: prepared.buyerSeal, sats: SWAP_SEAL_SATS },   // the asset arrives here
                 { script: null, sats: price },                          // the seller's payout
                 { script: prepared.buyerChangeScript, sats: change },   // this wallet's change
             ],
-            fee,
+            BigInt(prepared.feeSats),
         );
 
         const signed = w.signPsbt(psbt);
