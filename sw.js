@@ -131,9 +131,9 @@ async function providerCall({ method, params }, origin) {
         return r.ok ? ok({ result: r.data }) : ok({ result: null });
     }
 
-    // A swap spends this wallet's sats and receives an asset, so it is approved like a signature,
-    // not like a read. The approval window shows what the offer says.
-    if (method === "swapPrepare" || method === "swapSign") {
+    // A swap moves this wallet's sats or its asset, so it is approved like a signature, not like
+    // a read. The approval window shows what the offer says, read from the platform itself.
+    if (method === "swapPrepare" || method === "swapSign" || method === "swapColor" || method === "swapFinish") {
         if (!(await isAuthorized(origin))) return ok({ error: RGB_ERR.unauthorized, pending: false });
         if (!(await unlocked())) return ok({ error: RGB_ERR.locked, pending: false });
         if (typeof params?.offerId !== "string" || !params.offerId) {
@@ -147,8 +147,11 @@ async function providerCall({ method, params }, origin) {
             return ok({ error: RGB_ERR.other("apiBase must be a path or URL on this site") });
         }
         params = { ...params, apiBase };
-        if (method === "swapSign" && (typeof params?.psbt !== "string" || !params.psbt)) {
+        if ((method === "swapSign" || method === "swapFinish") && (typeof params?.psbt !== "string" || !params.psbt)) {
             return ok({ error: RGB_ERR.other("psbt is required") });
+        }
+        if (method === "swapColor" && (typeof params?.session !== "object" || !params.session)) {
+            return ok({ error: RGB_ERR.other("session is required") });
         }
         const reqId = crypto.randomUUID();
         await setReq(reqId, { method, origin, params, status: "pending", createdAt: Date.now() });
@@ -203,9 +206,8 @@ async function decide({ reqId, approve }) {
         return ok({ status: "done" });
     }
 
-    if (req.method === "swapPrepare" || req.method === "swapSign") {
-        const cmd = req.method === "swapPrepare" ? "swapPrepare" : "swapSign";
-        const r = await toEngine(cmd, req.params);
+    if (["swapPrepare", "swapSign", "swapColor", "swapFinish"].includes(req.method)) {
+        const r = await toEngine(req.method, req.params);
         if (!r.ok) { await setReq(reqId, { ...req, status: "error", error: RGB_ERR.other(r.err) }); return ok({ status: "error" }); }
         await setReq(reqId, { ...req, status: "done", result: r.data });
         return ok({ status: "done" });

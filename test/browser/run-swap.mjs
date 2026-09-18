@@ -86,13 +86,16 @@ console.log("take ->", JSON.stringify(taken));
 
 step("wait for the seller's PSBT");
 let psbt = null;
-for (let i = 0; i < 60 && !psbt; i++) {
+// WAIT_MIN: how long to wait for the seller. A person selling from its own wallet confirms by
+// hand; the platform's daemon answers within seconds.
+const waitRounds = Number(process.env.WAIT_MIN || 2) * 30;
+for (let i = 0; i < waitRounds && !psbt; i++) {
     const s = await api("GET", `/v1/p2p/sessions/${taken.sessionId}`);
     if (s.psbt) psbt = s.psbt;
-    else if (s.state !== "MATCHED") die(`session is ${s.state}`);
+    else if (s.state !== "MATCHED" && s.state !== "COLORED") die(`session is ${s.state}`);
     else await sleep(2000);
 }
-if (!psbt) die("the seller did not sign within two minutes");
+if (!psbt) die("the seller did not colour in time");
 // ABANDON=1 stops here and lets the session expire, so the next run colours the same allocation
 // a second time: the path where a stale consignment used to reach the buyer.
 if (process.env.ABANDON) { await b.close(); console.log(`\nABANDONED  session ${taken.sessionId} will expire`); process.exit(0); }
@@ -102,13 +105,13 @@ const signed = await must("swapSign", { offerId, psbt, apiBase: API });
 await api("POST", `/v1/p2p/sessions/${taken.sessionId}/sign`, { psbt: signed.psbt });
 
 step("wait for the seller to sign and broadcast");
-for (let i = 0; i < 60 && !signed.txid; i++) {
+for (let i = 0; i < waitRounds && !signed.txid; i++) {
     const s = await api("GET", `/v1/p2p/sessions/${taken.sessionId}`);
     if (s.txid) signed.txid = s.txid;
     else if (s.state !== "BUYER_SIGNED") die(`session is ${s.state}`);
     else await sleep(2000);
 }
-if (!signed.txid) die("the seller did not broadcast within two minutes");
+if (!signed.txid) die("the seller did not broadcast in time");
 console.log("broadcast", signed.txid);
 
 step("confirm and pick up the asset");

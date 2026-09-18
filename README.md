@@ -48,7 +48,7 @@ Our own code, minified, plus exactly one third-party binary:
 
 | | |
 |---|---|
-| `pkg/` | The RGB engine — **[rgb-lib-wasm](https://github.com/UTEXO-Protocol/rgb-lib-wasm)**, MIT, built from commit `2610d4a` **unmodified**, with the upstream's own `bindings/wasm/build.sh`. It is the WASM binding of [RGB-Tools/rgb-lib](https://github.com/RGB-Tools/rgb-lib) and carries the same authors. Reproduce it with the steps in [The wasm engine](#the-wasm-engine) |
+| `pkg/` | The RGB engine — **[rgb-lib-wasm](https://github.com/UTEXO-Protocol/rgb-lib-wasm)**, MIT, built from commit `2610d4a` **with the additions listed in [The wasm engine](#the-wasm-engine)**, using the upstream's own `bindings/wasm/build.sh`. It is the WASM binding of [RGB-Tools/rgb-lib](https://github.com/RGB-Tools/rgb-lib) and carries the same authors |
 | everything else | Ours: `lib/`, the popup, the service worker, the offscreen document, the content scripts. Each JS and CSS file is minified on its own by `store/pack.sh`; this repository holds the unminified source |
 
 **No npm dependencies, no bundler.** Minification strips comments and whitespace and shortens
@@ -238,9 +238,9 @@ publishes is the same binary this repository was tested against. wasm-pack drops
 before; `pkg/.gitignore` is now a comment and a rebuild that restores the `*` shows up in
 `git status`.
 
-Built from `github.com/UTEXO-Protocol/rgb-lib-wasm` at `2610d4a`, MIT, **with four additions**
-for peer-to-peer swaps, where a counterparty builds the transaction and this wallet only adds its
-own signature:
+Built from `github.com/UTEXO-Protocol/rgb-lib-wasm` at `2610d4a`, MIT, **with six additions**
+for peer-to-peer swaps, as buyer (the seller builds the transaction and this wallet only adds its
+own signature) and as seller (this wallet builds it, colours it and signs last):
 
 | Addition | Why it is needed |
 |---|---|
@@ -248,6 +248,8 @@ own signature:
 | `WasmWallet.checkSwapPsbt(psbt, inputs, outputs, feeSats)` | Compares a PSBT with what this wallet agreed to, before signing. An expected script may be `null` to check the value only. It also refuses any input asking for a sighash other than ALL: such a signature stays valid over rewritten outputs, so the counterparty could redirect the sats afterwards and re-sign only its own input. |
 | `WasmWallet.swapPsbtInputs(psbt)` | The outpoints a PSBT spends, to tell this wallet's input from the counterparty's. |
 | `wallet.broadcastPsbt(online, finalizedPsbt)` | Broadcasts a transaction this wallet did not build. |
+| `WasmWallet.buildSwapPsbt(inputs, outputs)` | Builds a swap's unsigned PSBT with an empty `OP_RETURN` at output 0 and each input's spent output filled in. A taproot signature commits to every input's amount and script. |
+| `wallet.swapBegin(online, psbt, assetId, amount, recipientId, sealVout, sealSats, endpoints, minConfirmations)` | Colours a swap PSBT through the same path as `sendBegin`, taking the asset only from this wallet's inputs in it, and records it as a donation, so the stock `sendEnd` broadcasts it, posts the consignment and records the sale once both sides have signed. The sale is kept in this wallet's database like any send. |
 
 Nothing else is changed, and no existing behaviour is touched. MIT permits the modification and
 requires its notice to travel with the binary, which [NOTICE](NOTICE) does.

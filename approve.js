@@ -27,6 +27,22 @@ const reqId = new URLSearchParams(location.search).get("req");
             <div class="msg">${esc(params.message)}</div>
             ${addr}
             <p class="warn">Signing moves no assets. It proves you control the address above.</p>`;
+    } else if (method === "swapColor" || method === "swapFinish") {
+        let offer = null;
+        try {
+            const res = await fetch(`${params.apiBase.replace(/\/+$/, "")}/v1/p2p/offers/${encodeURIComponent(params.offerId)}`);
+            if (res.ok) offer = await res.json();
+        } catch { /* shown as unavailable below */ }
+        const detail = offer
+            ? `<div class="msg">Sell <b>${esc(offer.amount)}</b> of<br>${esc(offer.assetId)}<br>for <b>${esc(offer.priceSats)}</b> sats</div>`
+            : `<p class="err">The offer could not be read from ${esc(params.apiBase)}</p>`;
+        if (method === "swapColor") {
+            $("body").innerHTML = `<h2>Prepare your sale</h2>${who}${detail}
+                <p class="muted">Someone took your offer. This builds the transaction from your wallet and reserves the asset for it. Nothing is signed yet; the buyer signs next.</p>`;
+        } else {
+            $("body").innerHTML = `<h2>Sign and broadcast your sale</h2>${who}${detail}
+                <p class="warn">The buyer has signed. Signing now completes the sale in one transaction: the asset leaves your wallet and the sats arrive together, or neither. Only the transaction your wallet prepared can be signed.</p>`;
+        }
     } else if (method === "swapPrepare" || method === "swapSign") {
         // What the offer says, read here from the platform rather than from the page: the page
         // asked for this window, so it is not a source for what the window shows.

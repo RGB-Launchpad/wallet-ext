@@ -140,6 +140,31 @@ export class WasmWallet {
         return ret;
     }
     /**
+     * Build a swap's unsigned PSBT: `inputs` as `[{ outpoint, sats, script }]`, `outputs` as
+     * `[{ script, sats }]` in order. An empty OP_RETURN is put at output 0, as `swapBegin` needs.
+     * @param {any} inputs_js
+     * @param {any} outputs_js
+     * @returns {string}
+     */
+    static buildSwapPsbt(inputs_js, outputs_js) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+            const ret = wasm.wasmwallet_buildSwapPsbt(inputs_js, outputs_js);
+            var ptr1 = ret[0];
+            var len1 = ret[1];
+            if (ret[3]) {
+                ptr1 = 0; len1 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred2_0 = ptr1;
+            deferred2_1 = len1;
+            return getStringFromWasm0(ptr1, len1);
+        } finally {
+            wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+    }
+    /**
      * Check a swap PSBT against what this wallet agreed to, before signing it.
      *
      * `inputs` is an array of `"txid:vout"`, `outputs` an array of `{ script, sats }` in order,
@@ -740,6 +765,32 @@ export class WasmWallet {
         } finally {
             wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
         }
+    }
+    /**
+     * The seller's half of a peer-to-peer swap on a PSBT built by the caller: colours it through
+     * the same path as `sendBegin`, recorded as a donation, and returns it unsigned. Output 0
+     * must be an OP_RETURN placeholder; `sealVout` is the output paying the buyer's witness seal.
+     * Once both sides have signed, `sendEnd` broadcasts, posts the consignment and records it.
+     * @param {any} online_js
+     * @param {string} psbt
+     * @param {string} asset_id
+     * @param {bigint} amount
+     * @param {string} recipient_id
+     * @param {number} seal_vout
+     * @param {bigint} seal_amount_sat
+     * @param {any} transport_endpoints_js
+     * @param {number} min_confirmations
+     * @returns {Promise<string>}
+     */
+    swapBegin(online_js, psbt, asset_id, amount, recipient_id, seal_vout, seal_amount_sat, transport_endpoints_js, min_confirmations) {
+        const ptr0 = passStringToWasm0(psbt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(asset_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(recipient_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_swapBegin(this.__wbg_ptr, online_js, ptr0, len0, ptr1, len1, amount, ptr2, len2, seal_vout, seal_amount_sat, transport_endpoints_js, min_confirmations);
+        return ret;
     }
     /**
      * The outpoints a PSBT spends, as `"txid:vout"`.
@@ -1612,27 +1663,27 @@ function __wbg_get_imports() {
             return ret;
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 3290, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 3314, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_fbfb77f5f81cea49___convert__closures_____invoke___wasm_bindgen_fbfb77f5f81cea49___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_fbfb77f5f81cea49___JsError___true_);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("Event")], shim_idx: 1810, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("Event")], shim_idx: 1834, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_fbfb77f5f81cea49___convert__closures_____invoke___web_sys_a631e2897884c5f1___features__gen_Event__Event______true_);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("IDBVersionChangeEvent")], shim_idx: 1316, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("IDBVersionChangeEvent")], shim_idx: 1390, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_fbfb77f5f81cea49___convert__closures_____invoke___web_sys_a631e2897884c5f1___features__gen_IdbVersionChangeEvent__IdbVersionChangeEvent______true_);
             return ret;
         },
         __wbindgen_cast_0000000000000004: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 1592, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 1616, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_fbfb77f5f81cea49___convert__closures_____invoke_______true_);
             return ret;
         },
         __wbindgen_cast_0000000000000005: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 1756, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [], shim_idx: 1780, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm_bindgen_fbfb77f5f81cea49___convert__closures_____invoke_______true__1_);
             return ret;
         },

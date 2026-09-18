@@ -13,7 +13,7 @@ import { DEFAULTS, NETWORKS } from "./config.js";
 import { clearingRate, bid } from "./lib/fee.js";
 import { slotBlocker, slotsToCreate, explainSendError } from "./lib/slots.js";
 import { dataDirOf } from "./lib/chain.js";
-import { pickSwapInput } from "./lib/swap.js";
+import { pickSwapInput, pickSellerInput, sellerPayout } from "./lib/swap.js";
 
 const S = {
     wallet: null,
@@ -165,6 +165,17 @@ async function proxyHasConsignment(proxy, recipientId) {
     // -400 "Consignment file not found": the id is free.
     if (body.error?.code === -400) return false;
     throw new Error(`RGB proxy: ${body.error?.message || "unexpected reply"}`);
+}
+
+/** The output `txid:vout` spends, as `{ sats, script }`, from the configured indexer. */
+async function prevOutput(outpoint) {
+    const [txid, vout] = String(outpoint).split(":");
+    const base = endpoints(S.settings).esplora.replace(/\/+$/, "");
+    const r = await fetch(`${base}/tx/${txid}`, { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) throw new Error(`Cannot read ${outpoint}: indexer ${r.status}`);
+    const out = (await r.json()).vout?.[Number(vout)];
+    if (!Number.isSafeInteger(out?.value)) throw new Error(`${outpoint} does not exist`);
+    return { sats: out.value, script: out.scriptpubkey };
 }
 
 /** The value of `txid:vout`, from the configured indexer. */
@@ -486,11 +497,12 @@ const handlers = {
         const price = Number(prepared.priceSats);
         const fee = Number(prepared.feeSats);
         const sellerIn = psbtSellerInput(psbt, prepared.buyerOutpoint);
-        // The seller's colored input funds the seal output alongside the buyer's, so the buyer's
-        // change is what both inputs hold minus the layout. Its value is read from this wallet's
-        // own indexer, not from the PSBT the counterparty built.
-        const change = Number(prepared.buyerInputSats) + await outputSats(sellerIn)
-            - SWAP_SEAL_SATS - price - fee;
+        // The seller's colored input funds the seal output, and what it holds beyond that goes back
+        // to the seller; the buyer's change is its own input minus the price and the fee. The
+        // seller's input is read from this wallet's own indexer, not from the counterparty's PSBT.
+        const sellerSats = await outputSats(sellerIn);
+        const payout = Number(sellerPayout(price, sellerSats, SWAP_SEAL_SATS));
+        const change = Number(prepared.buyerInputSats) - price - fee;
         if (change < 0) throw new Error("The prepared input no longer covers the price and the fee");
         WasmWallet.checkSwapPsbt(
             psbt,
@@ -498,7 +510,7 @@ const handlers = {
             [
                 { script: null, sats: 0 },                              // the RGB commitment
                 { script: prepared.buyerSeal, sats: SWAP_SEAL_SATS },   // the asset arrives here
-                { script: null, sats: price },                          // the seller's payout
+                { script: null, sats: payout },                         // the seller's payout
                 { script: prepared.buyerChangeScript, sats: change },   // this wallet's change
             ],
             BigInt(prepared.feeSats),
@@ -511,6 +523,86 @@ const handlers = {
         S.swaps.delete(String(offerId));
         await w.flush();
         return { offerId, psbt: signed, assetId: prepared.assetId, amount: prepared.amount, priceSats: prepared.priceSats };
+    },
+
+    /**
+     * The seller's half of a swap, step one: build the transaction and colour it.
+     *
+     * The offer (asset, amount, price) is read from the platform's public endpoint, not taken
+     * from the page. The page supplies the buyer's side of the session; what the seller relies on
+     * is built here: the asset leaves only from this wallet's own UTXO, and the payout goes to
+     * this wallet's address for the price plus what that UTXO holds beyond the seal.
+     *
+     * Colouring goes through rgb-lib's transfer path (`swapBegin`), so the sale is recorded in
+     * this wallet as any send is. Nothing is signed here: the seller signs last, in `swapFinish`.
+     */
+    async swapColor({ offerId, apiBase, network, session }) {
+        const w = needWallet();
+        if (typeof network === "string" && network.toLowerCase() !== String(S.network).toLowerCase()) {
+            throw new Error(`This wallet is on ${S.network} and the site is on ${network}. Switch the network in the wallet's settings.`);
+        }
+        const on = needOnline();
+        const offer = await platformOffer(apiBase, offerId);
+        if (offer.state && offer.state !== "MATCHED") throw new Error(`The offer is ${offer.state}`);
+        const s = session || {};
+
+        // The buyer's seal has to be the one its invoice names; the consignment goes to the
+        // proxies the invoice names.
+        const inv = plain(new WasmInvoice(String(s.buyerInvoice || "")).invoiceData());
+        const seal = WasmWallet.invoiceSealScript(s.buyerInvoice);
+        if (seal !== s.buyerSeal) throw new Error("The buyer's seal does not match its invoice");
+        const proxies = (inv.transportEndpoints || []).length
+            ? inv.transportEndpoints
+            : [endpoints(S.settings).proxy];
+
+        await w.sync(on);
+        const unspents = plain(w.listUnspents(false));
+        const own = new Set(unspents.map((u) => `${u.utxo.outpoint.txid}:${u.utxo.outpoint.vout}`));
+        if (own.has(String(s.buyerOutpoint))) throw new Error("The buyer's input is one of this wallet's own");
+        const seller = pickSellerInput(unspents, offer.assetId, offer.amount);
+        if (!seller) throw new Error("No settled UTXO of this wallet holds that much of the asset");
+
+        const [sellerPrev, buyerPrev] = await Promise.all([prevOutput(seller.outpoint), prevOutput(s.buyerOutpoint)]);
+        const price = BigInt(offer.priceSats);
+        const fee = BigInt(s.feeSats);
+        const change = BigInt(buyerPrev.sats) - price - fee;
+        if (change < 0n) throw new Error("The buyer's input does not cover the price and the fee");
+        const payout = sellerPayout(price, sellerPrev.sats, SWAP_SEAL_SATS);
+
+        const psbt = WasmWallet.buildSwapPsbt(
+            [
+                { outpoint: seller.outpoint, sats: sellerPrev.sats, script: sellerPrev.script },
+                { outpoint: String(s.buyerOutpoint), sats: buyerPrev.sats, script: buyerPrev.script },
+            ],
+            [
+                { script: seal, sats: SWAP_SEAL_SATS },
+                { script: hex.to(scriptPubKeyOf(w.getAddress())), sats: Number(payout) },
+                { script: String(s.buyerChangeScript), sats: Number(change) },
+            ],
+        );
+        const colored = await w.swapBegin(
+            on, psbt, offer.assetId, BigInt(offer.amount), inv.recipientId, 1, BigInt(SWAP_SEAL_SATS),
+            proxies, DEFAULTS.minConfirmations,
+        );
+        await w.flush();
+        return { psbt: colored, sellerOutpoint: seller.outpoint };
+    },
+
+    /**
+     * The seller's half, step two: sign the buyer-signed transaction and broadcast it.
+     *
+     * Only the transaction this wallet coloured can be finished: `sendEnd` looks its transfer up
+     * by the transaction id, and a PSBT with any output changed has another id. `sendEnd` then
+     * broadcasts, posts the consignment to the buyer's proxy and records the sale.
+     */
+    async swapFinish({ psbt }) {
+        const w = needWallet();
+        const on = needOnline();
+        if (typeof psbt !== "string" || !psbt) throw new Error("psbt is required");
+        const signed = w.signPsbt(psbt);
+        const r = plain(await w.sendEnd(on, signed, false));
+        await w.flush();
+        return { txid: r.txid };
     },
 
     /**

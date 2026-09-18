@@ -42,6 +42,10 @@
         // sign blindly.
         swapPrepare: (opts) => request("swapPrepare", opts || {}),
         swapSign: (opts) => request("swapSign", opts || {}),
+        // Selling from this wallet: colour a taken offer, then sign and broadcast once the buyer
+        // has signed. The wallet builds the transaction itself from the offer it reads.
+        swapColor: (opts) => request("swapColor", opts || {}),
+        swapFinish: (opts) => request("swapFinish", opts || {}),
         // Reserved; currently returns "not implemented".
         getInvoice: (opts) => request("getInvoice", opts || {}),
         on(event, cb) { listeners[event]?.add(cb); },

@@ -14,6 +14,7 @@ export const wasmwallet_backup: (a: number, b: number, c: number) => [number, nu
 export const wasmwallet_backupInfo: (a: number) => [number, number, number];
 export const wasmwallet_blindReceive: (a: number, b: number, c: number, d: any, e: number, f: any, g: number) => [number, number, number];
 export const wasmwallet_broadcastPsbt: (a: number, b: any, c: number, d: number) => any;
+export const wasmwallet_buildSwapPsbt: (a: any, b: any) => [number, number, number, number];
 export const wasmwallet_checkSwapPsbt: (a: number, b: number, c: any, d: any, e: bigint) => [number, number];
 export const wasmwallet_configureVssBackup: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
 export const wasmwallet_create: (a: number, b: number) => any;
@@ -53,6 +54,7 @@ export const wasmwallet_sendBtcBegin: (a: number, b: any, c: number, d: number, 
 export const wasmwallet_sendBtcEnd: (a: number, b: any, c: number, d: number, e: number) => any;
 export const wasmwallet_sendEnd: (a: number, b: any, c: number, d: number, e: number) => any;
 export const wasmwallet_signPsbt: (a: number, b: number, c: number) => [number, number, number, number];
+export const wasmwallet_swapBegin: (a: number, b: any, c: number, d: number, e: number, f: number, g: bigint, h: number, i: number, j: number, k: bigint, l: any, m: number) => any;
 export const wasmwallet_swapPsbtInputs: (a: number, b: number) => [number, number, number];
 export const wasmwallet_sync: (a: number, b: any) => any;
 export const wasmwallet_vssBackup: (a: number) => any;

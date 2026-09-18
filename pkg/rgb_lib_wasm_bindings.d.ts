@@ -46,6 +46,11 @@ export class WasmWallet {
      */
     broadcastPsbt(online_js: any, finalized_psbt: string): Promise<string>;
     /**
+     * Build a swap's unsigned PSBT: `inputs` as `[{ outpoint, sats, script }]`, `outputs` as
+     * `[{ script, sats }]` in order. An empty OP_RETURN is put at output 0, as `swapBegin` needs.
+     */
+    static buildSwapPsbt(inputs_js: any, outputs_js: any): string;
+    /**
      * Check a swap PSBT against what this wallet agreed to, before signing it.
      *
      * `inputs` is an array of `"txid:vout"`, `outputs` an array of `{ script, sats }` in order,
@@ -238,6 +243,13 @@ export class WasmWallet {
      */
     signPsbt(unsigned_psbt: string): string;
     /**
+     * The seller's half of a peer-to-peer swap on a PSBT built by the caller: colours it through
+     * the same path as `sendBegin`, recorded as a donation, and returns it unsigned. Output 0
+     * must be an OP_RETURN placeholder; `sealVout` is the output paying the buyer's witness seal.
+     * Once both sides have signed, `sendEnd` broadcasts, posts the consignment and records it.
+     */
+    swapBegin(online_js: any, psbt: string, asset_id: string, amount: bigint, recipient_id: string, seal_vout: number, seal_amount_sat: bigint, transport_endpoints_js: any, min_confirmations: number): Promise<string>;
+    /**
      * The outpoints a PSBT spends, as `"txid:vout"`.
      */
     static swapPsbtInputs(psbt: string): any;
@@ -304,6 +316,7 @@ export interface InitOutput {
     readonly wasmwallet_backupInfo: (a: number) => [number, number, number];
     readonly wasmwallet_blindReceive: (a: number, b: number, c: number, d: any, e: number, f: any, g: number) => [number, number, number];
     readonly wasmwallet_broadcastPsbt: (a: number, b: any, c: number, d: number) => any;
+    readonly wasmwallet_buildSwapPsbt: (a: any, b: any) => [number, number, number, number];
     readonly wasmwallet_checkSwapPsbt: (a: number, b: number, c: any, d: any, e: bigint) => [number, number];
     readonly wasmwallet_configureVssBackup: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => [number, number];
     readonly wasmwallet_create: (a: number, b: number) => any;
@@ -343,6 +356,7 @@ export interface InitOutput {
     readonly wasmwallet_sendBtcEnd: (a: number, b: any, c: number, d: number, e: number) => any;
     readonly wasmwallet_sendEnd: (a: number, b: any, c: number, d: number, e: number) => any;
     readonly wasmwallet_signPsbt: (a: number, b: number, c: number) => [number, number, number, number];
+    readonly wasmwallet_swapBegin: (a: number, b: any, c: number, d: number, e: number, f: number, g: bigint, h: number, i: number, j: number, k: bigint, l: any, m: number) => any;
     readonly wasmwallet_swapPsbtInputs: (a: number, b: number) => [number, number, number];
     readonly wasmwallet_sync: (a: number, b: any) => any;
     readonly wasmwallet_vssBackup: (a: number) => any;
