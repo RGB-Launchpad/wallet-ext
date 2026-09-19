@@ -24,4 +24,4 @@ no bundler, nothing fetched at install time. The repository README has the
 steps to rebuild that binary yourself.
 
 ⚠️ That engine describes itself as *"Beta Software — under active development and has not
-been audited."* Signet and small amounts only; this wallet does not offer mainnet.
+been audited."* Mainnet is offered; keep amounts small.

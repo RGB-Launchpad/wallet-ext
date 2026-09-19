@@ -30,7 +30,7 @@ for your address and for a message signature; it cannot ask the wallet to move a
 Bitcoin transactions spend only the plain keychain, so UTXOs carrying RGB assets are never
 touched.
 
-Networks: Signet, Testnet4 and Regtest. Mainnet is not enabled.
+Networks: Mainnet, Signet, Testnet4 and Regtest.
 
 The RGB engine is rgb-lib-wasm (MIT), bundled and built from source, not downloaded at run
 time. It describes itself as beta software that has not been audited. Use small amounts.

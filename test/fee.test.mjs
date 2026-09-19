@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { clearingRate, bid } from "../lib/fee.js";
-import { FEE } from "../config.js";
+import { FEE, DEFAULTS, feeFor } from "../config.js";
 
 const B = FEE.blockVsize;
 
@@ -48,4 +48,23 @@ test("missing signals are dropped, not treated as zero-or-NaN", () => {
 test("the bid is a whole number: rgb-lib takes an integer rate", () => {
     const b = bid([4.07]);
     assert.equal(b, Math.round(b));
+});
+
+// Mainnet spends real coins, so it bids near the market instead of three times over it.
+const MAIN = feeFor("Mainnet");
+
+test("mainnet bids near the clearing rate, not the test-network floor", () => {
+    assert.equal(bid([1, 1.5], MAIN), MAIN.min);
+    assert.ok(MAIN.min < FEE.min);
+    assert.equal(bid([10], MAIN), Math.ceil(10 * MAIN.safety));
+    assert.equal(bid([100_000], MAIN), MAIN.max);
+});
+
+test("mainnet's cap is payable from one slot: an RGB send pays its fee from colored UTXOs only", () => {
+    assert.ok(MAIN.max * 154 <= DEFAULTS.utxoSizeSat);
+});
+
+test("a network without overrides bids like before", () => {
+    assert.deepEqual(feeFor("Signet"), FEE);
+    assert.deepEqual(feeFor("NoSuchNet"), FEE);
 });

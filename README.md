@@ -56,8 +56,8 @@ local names; it does not obfuscate. `unzip -l` lists every file in a release zip
 fetched or built at install time.
 
 ⚠️ Upstream describes itself as **"Beta Software — under active development and has not been
-audited."** That applies to the engine this wallet runs on. Signet and small amounts only;
-mainnet is not offered.
+audited."** That applies to the engine this wallet runs on. Mainnet is offered; keep amounts
+small.
 
 ## Install from a clone
 
@@ -126,8 +126,10 @@ Not implemented: `getInvoice()` and receive QR codes.
 11. Fees are bid above the clearing rate, not estimated tightly. Esplora's `/fee-estimates`
     is unreliable on these chains — measured on signet it returned 0.1 sat/vB for a 6-block
     target while blocks were clearing at 4.07. `lib/fee.js` walks the mempool histogram
-    instead, and a floor covers a queue that only looks quiet. Mainnet is not offered, so
-    overpaying costs nothing while a stuck transfer costs a round of testing.
+    instead, and a floor covers a queue that only looks quiet. On the test networks overpaying
+    costs nothing while a stuck transfer costs a round of testing, so the bid is 3× the
+    clearing rate with a floor of 30 sat/vB. Mainnet spends real coins and bids 1.25× with a
+    floor of 2 and a cap of 100 sat/vB, the most one 20000-sat slot can pay for a send.
 
 ## rgb-lib wasm bindings
 
@@ -148,10 +150,12 @@ carries assets. Invoice lifetimes are short for that reason.
 
 ## Endpoints
 
-| | Signet (default) | Testnet4 | Regtest |
-|---|---|---|---|
-| Indexer | `https://mempool.space/signet/api` | `https://mempool.space/testnet4/api` | `https://regtest-indexer.rgblaunchpad.meme/regtest/api` |
-| RGB proxy | `rpcs://proxy.rgblaunchpad.meme/json-rpc` | `rpcs://proxy.rgblaunchpad.meme/json-rpc` | `rpcs://regtest-proxy.rgblaunchpad.meme/json-rpc` |
+| | Mainnet | Signet (default) | Testnet4 | Regtest |
+|---|---|---|---|---|
+| Indexer | `https://mempool.space/api` | `https://mempool.space/signet/api` | `https://mempool.space/testnet4/api` | `https://regtest-indexer.rgblaunchpad.meme/regtest/api` |
+| RGB proxy | `rpcs://proxy.rgblaunchpad.meme/json-rpc` | `rpcs://proxy.rgblaunchpad.meme/json-rpc` | `rpcs://proxy.rgblaunchpad.meme/json-rpc` | `rpcs://regtest-proxy.rgblaunchpad.meme/json-rpc` |
+
+A Mainnet wallet holds NIA assets only: rgb-lib refuses to open a mainnet wallet that lists IFA.
 
 No default points at localhost: one machine runs the regtest sandbox and the rest reach it
 through a tunnel. Endpoints outside `host_permissions` are requested when settings are saved.

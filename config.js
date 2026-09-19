@@ -1,5 +1,14 @@
-// Networks and endpoint defaults. Mainnet is not offered.
+// Networks and endpoint defaults.
 export const NETWORKS = {
+    // Real funds. `fee` replaces the test-network bidding below: overpaying there costs nothing,
+    // here it costs the user. NOTE: the cap is what one slot can pay for: an RGB send of about
+    // 154 vB pays its fee from colored UTXOs only, and 100 × 154 fits in `utxoSizeSat`.
+    Mainnet: {
+        label: "Mainnet",
+        esplora: "https://mempool.space/api",
+        proxy: "rpcs://proxy.rgblaunchpad.meme/json-rpc",
+        fee: { safety: 1.25, min: 2, max: 100 },
+    },
     Signet: {
         label: "Signet",
         // Esplora over HTTP: browsers have no TCP.
@@ -44,9 +53,9 @@ export const DEFAULTS = {
     refreshCooldownMs: 5000,
 };
 
-// Fee bidding. Mainnet is not offered, so every network here spends worthless coins, while a
-// transaction that misses the block costs a round of testing. Bid above the clearing rate,
-// not the least that might work.
+// Fee bidding on the test networks, where coins are worthless while a transaction that misses
+// the block costs a round of testing: bid well above the clearing rate, not the least that
+// might work. A network's own `fee` overrides these keys.
 export const FEE = {
     // Multiplier on what the front of the mempool is currently clearing at.
     safety: 3,
@@ -60,6 +69,9 @@ export const FEE = {
     // One block's worth of transactions, for walking the mempool histogram.
     blockVsize: 1_000_000,
 };
+
+/** Fee bidding for one network: `FEE` with the network's overrides. */
+export const feeFor = (network) => ({ ...FEE, ...(NETWORKS[network]?.fee || {}) });
 
 export const LIMITS = {
     // Absolute floor for creating slots. The real requirement is computed per attempt,

@@ -9,7 +9,7 @@ import init, { generateKeys, restoreKeys, WasmWallet, WasmInvoice } from "./pkg/
 import { unseal, seal } from "./lib/vault.js";
 import { listen, plain } from "./lib/msg.js";
 import { buildToSignPsbt, extractWitness, signatureFromWitness, decodeAddress, scriptPubKeyOf, hex } from "./lib/bip322.js";
-import { DEFAULTS, NETWORKS } from "./config.js";
+import { DEFAULTS, NETWORKS, feeFor } from "./config.js";
 import { clearingRate, bid } from "./lib/fee.js";
 import { slotBlocker, slotsToCreate, explainSendError } from "./lib/slots.js";
 import { dataDirOf } from "./lib/chain.js";
@@ -60,7 +60,8 @@ async function bootWallet(mnemonic, settings) {
         mnemonic,
         masterFingerprint: keys.masterFingerprint,
         vanillaKeychain: null,
-        supportedSchemas: ["Nia", "Ifa"],
+        // NOTE: rgb-lib refuses to open a mainnet wallet that lists IFA.
+        supportedSchemas: settings.network === "Mainnet" ? ["Nia"] : ["Nia", "Ifa"],
         // Pins the address index so the identity address is stable across sessions.
         // NOTE: rotateAddress must stay unexposed; rotating changes the identity.
         reuseAddresses: true,
@@ -212,12 +213,13 @@ async function mempoolHistogram(esplora) {
  * callers pass in. The maths, and why the floor matters, are in lib/fee.js.
  */
 async function feeRate_() {
+    const fee = feeFor(S.network);
     const seen = [];
-    try { seen.push(clearingRate(await mempoolHistogram(endpoints(S.settings).esplora))); }
+    try { seen.push(clearingRate(await mempoolHistogram(endpoints(S.settings).esplora), fee)); }
     catch { /* indexer without /mempool: the floor still applies */ }
     try { seen.push(await S.wallet.getFeeEstimation(S.online, 1)); }
     catch { /* no estimate on a fresh regtest chain */ }
-    return BigInt(bid(seen));
+    return BigInt(bid(seen, fee));
 }
 
 /**
