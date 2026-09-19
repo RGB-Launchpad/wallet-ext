@@ -251,7 +251,10 @@ own signature) and as seller (this wallet builds it, colours it and signs last):
 | `WasmWallet.buildSwapPsbt(inputs, outputs)` | Builds a swap's unsigned PSBT with an empty `OP_RETURN` at output 0 and each input's spent output filled in. A taproot signature commits to every input's amount and script. |
 | `wallet.swapBegin(online, psbt, assetId, amount, recipientId, sealVout, sealSats, endpoints, minConfirmations)` | Colours a swap PSBT through the same path as `sendBegin`, taking the asset only from this wallet's inputs in it, and records it as a donation, so the stock `sendEnd` broadcasts it, posts the consignment and records the sale once both sides have signed. The sale is kept in this wallet's database like any send. |
 
-Nothing else is changed, and no existing behaviour is touched. MIT permits the modification and
+One existing behaviour is corrected: an asset balance counted a witness receive waiting for
+confirmations twice, once through the allocation already recorded on its output and once through
+the amount requested, so `future` showed twice the incoming amount. It is now counted once.
+Nothing else is changed. MIT permits the modification and
 requires its notice to travel with the binary, which [NOTICE](NOTICE) does.
 
 ```sh
