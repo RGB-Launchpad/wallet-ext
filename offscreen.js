@@ -167,15 +167,19 @@ async function proxyHasConsignment(proxy, recipientId) {
     throw new Error(`RGB proxy: ${body.error?.message || "unexpected reply"}`);
 }
 
-/** The output `txid:vout` spends, as `{ sats, script }`, from the configured indexer. */
+/**
+ * The output `txid:vout` spends, as `{ sats, script, tx }`, from the configured indexer. `tx` is
+ * the whole transaction in hex: the signer refuses an input without it.
+ */
 async function prevOutput(outpoint) {
     const [txid, vout] = String(outpoint).split(":");
     const base = endpoints(S.settings).esplora.replace(/\/+$/, "");
-    const r = await fetch(`${base}/tx/${txid}`, { signal: AbortSignal.timeout(8000) });
-    if (!r.ok) throw new Error(`Cannot read ${outpoint}: indexer ${r.status}`);
+    const get = (p) => fetch(`${base}${p}`, { signal: AbortSignal.timeout(8000) });
+    const [r, h] = await Promise.all([get(`/tx/${txid}`), get(`/tx/${txid}/hex`)]);
+    if (!r.ok || !h.ok) throw new Error(`Cannot read ${outpoint}: indexer ${r.ok ? h.status : r.status}`);
     const out = (await r.json()).vout?.[Number(vout)];
     if (!Number.isSafeInteger(out?.value)) throw new Error(`${outpoint} does not exist`);
-    return { sats: out.value, script: out.scriptpubkey };
+    return { sats: out.value, script: out.scriptpubkey, tx: (await h.text()).trim() };
 }
 
 /** The value of `txid:vout`, from the configured indexer. */
@@ -578,8 +582,8 @@ const handlers = {
 
         const psbt = WasmWallet.buildSwapPsbt(
             [
-                { outpoint: seller.outpoint, sats: sellerPrev.sats, script: sellerPrev.script },
-                { outpoint: String(s.buyerOutpoint), sats: buyerPrev.sats, script: buyerPrev.script },
+                { outpoint: seller.outpoint, sats: sellerPrev.sats, script: sellerPrev.script, tx: sellerPrev.tx },
+                { outpoint: String(s.buyerOutpoint), sats: buyerPrev.sats, script: buyerPrev.script, tx: buyerPrev.tx },
             ],
             [
                 { script: seal, sats: SWAP_SEAL_SATS },

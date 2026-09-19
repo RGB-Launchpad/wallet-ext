@@ -54,8 +54,8 @@ const created = await must("create", { password: "probe-password", settings, mne
 if (created.mnemonic) console.log(`mnemonic: ${created.mnemonic}`);
 const { address } = await must("identity");
 
-step("fund it with 0.002 BTC and confirm");
-console.log("txid", bcli("sendtoaddress", address, "0.002"));
+step("fund it with 0.01 BTC and confirm");
+console.log("txid", bcli("sendtoaddress", address, "0.01"));
 mine();
 for (let i = 0; ; i++) {
     await sleep(3000);

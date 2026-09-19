@@ -64,16 +64,29 @@ async function startBot(i) {
     });
     browser.push(ctx);
     const page = ctx.pages()[0] || await ctx.newPage();
-    page.on("pageerror", (e) => console.log(name, "[pageerror]", String(e).slice(0, 200)));
+    const bot = { name, state, stateFile, page, crashed: false };
+    page.on("pageerror", (e) => {
+        console.log(name, "[pageerror]", String(e).slice(0, 200));
+        // A panic leaves the engine unusable; the next round reopens the wallet.
+        if (/unreachable/.test(String(e))) bot.crashed = true;
+    });
+    // The engine reports a panic, with where it happened, on the console.
+    page.on("console", (m) => { if (m.type() === "error") console.log(name, "[console]", m.text().slice(0, 600)); });
     await page.goto("http://127.0.0.1:8777/test/browser/swap-probe.html");
     await page.waitForFunction(() => document.title === "ready", null, { timeout: 60000 });
-    const bot = { name, state, stateFile, page };
     bot.call = async (cmd, args) => {
         const r = await page.evaluate(([c, a]) => window.call(c, a), [cmd, args]);
         if (!r.ok) throw new Error(`${cmd}: ${r.err}`);
         return r.data;
     };
     const save = () => fs.writeFileSync(stateFile, JSON.stringify(bot.state, null, 2), { mode: 0o600 });
+    bot.reopen = async () => {
+        await page.reload();
+        await page.waitForFunction(() => document.title === "ready", null, { timeout: 60000 });
+        await bot.call("create", { password: "bot-password", settings: { network: "Regtest" }, mnemonic: bot.state.mnemonic });
+        bot.crashed = false;
+        log(bot, "engine reopened after a crash");
+    };
 
     const created = await bot.call("create", {
         password: "bot-password", settings: { network: "Regtest" }, mnemonic: state.mnemonic,
@@ -202,6 +215,7 @@ process.on("SIGINT", async () => { for (const c of browser) await c.close().catc
 for (let round = 0; ; round++) {
     for (const bot of bots) {
         try {
+            if (bot.crashed) await bot.reopen();
             const open = await serve(bot);
             // Relist once the offer is gone (sold, expired or withdrawn) and stock remains.
             if (open === 0 && bot.amount && round % 6 === 0) {
