@@ -225,7 +225,9 @@ for (let round = 0; ; round++) {
                 if (st.confirmed) { bot.pendingSale = null; await bot.call("refresh").catch(() => {}); }
             }
             if (open === 0 && bot.amount && !bot.pendingSale && round % 6 === 0) {
-                if ((await holding(bot)).max >= bot.amount) await list(bot, bot.amount);
+                // A sale leaves less than one more offer; stock again first.
+                await stock(bot, bot.amount);
+                await list(bot, bot.amount);
             }
             if (round % 12 === 0) await bot.call("refresh").catch(() => {});
         } catch (e) { log(bot, "round failed:", e.message); }
