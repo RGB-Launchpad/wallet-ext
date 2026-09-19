@@ -13,7 +13,7 @@ import { DEFAULTS, NETWORKS } from "./config.js";
 import { clearingRate, bid } from "./lib/fee.js";
 import { slotBlocker, slotsToCreate, explainSendError } from "./lib/slots.js";
 import { dataDirOf } from "./lib/chain.js";
-import { pickSwapInput, pickSellerInput, sellerPayout } from "./lib/swap.js";
+import { pickSwapInput, pickSellerInput, sellerPayout, sellable } from "./lib/swap.js";
 
 const S = {
     wallet: null,
@@ -523,6 +523,13 @@ const handlers = {
         S.swaps.delete(String(offerId));
         await w.flush();
         return { offerId, psbt: signed, assetId: prepared.assetId, amount: prepared.amount, priceSats: prepared.priceSats };
+    },
+
+    /** How much of an asset this wallet can offer; see `sellable`. Read-only. */
+    async swapSellable({ assetId }) {
+        const w = needWallet();
+        if (S.online) { try { await w.sync(S.online); } catch { /* offline: last known figures */ } }
+        return sellable(plain(w.listUnspents(false)), String(assetId || ""));
     },
 
     /**

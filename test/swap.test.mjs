@@ -1,7 +1,7 @@
 // Which output a swap pays from.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pickSwapInput, pickSellerInput, sellerPayout } from "../lib/swap.js";
+import { pickSwapInput, pickSellerInput, sellerPayout, sellable } from "../lib/swap.js";
 
 /** An output as `listUnspentsVanilla` returns it, trimmed to what matters (shape seen on regtest). */
 const out = (vout, sats, { spent = false, bigint = false } = {}) => ({
@@ -63,4 +63,14 @@ test("the seller is paid the price plus its input beyond the seal", () => {
     assert.equal(sellerPayout(110352, 20000, 1000), 129352n);
     assert.equal(sellerPayout(110352, 1000, 1000), 110352n);
     assert.throws(() => sellerPayout(1, 500, 1000));
+});
+
+test("what can be sold: the settled total, and the largest single holding as the most one offer can ask", () => {
+    const u = [
+        colored(0, 20000, [alloc("rgb:a", 300)]),
+        colored(1, 20000, [alloc("rgb:a", 700), alloc("rgb:b", 5)]),
+        colored(2, 20000, [alloc("rgb:a", 900, false)]),
+    ];
+    assert.deepEqual(sellable(u, "rgb:a"), { total: "1000", max: "700" });
+    assert.deepEqual(sellable([], "rgb:a"), { total: "0", max: "0" });
 });

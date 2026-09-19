@@ -131,6 +131,16 @@ async function providerCall({ method, params }, origin) {
         return r.ok ? ok({ result: r.data }) : ok({ result: null });
     }
 
+    if (method === "swapSellable") {
+        // No prompt, like getAccount: a read, for a site this wallet is connected to.
+        if (!(await isAuthorized(origin)) || !(await unlocked())) return ok({ result: null });
+        if (typeof params?.assetId !== "string" || !params.assetId) {
+            return ok({ error: RGB_ERR.other("assetId is required") });
+        }
+        const r = await toEngine("swapSellable", { assetId: params.assetId });
+        return r.ok ? ok({ result: r.data }) : ok({ error: RGB_ERR.other(r.err) });
+    }
+
     // A swap moves this wallet's sats or its asset, so it is approved like a signature, not like
     // a read. The approval window shows what the offer says, read from the platform itself.
     if (method === "swapPrepare" || method === "swapSign" || method === "swapColor" || method === "swapFinish") {

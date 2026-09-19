@@ -46,6 +46,9 @@
         // has signed. The wallet builds the transaction itself from the offer it reads.
         swapColor: (opts) => request("swapColor", opts || {}),
         swapFinish: (opts) => request("swapFinish", opts || {}),
+        // How much of an asset this wallet can offer: { total, max }, `max` being the most one
+        // offer can ask. null when the site is not connected or the wallet is locked.
+        swapSellable: (opts) => request("swapSellable", opts || {}),
         // Reserved; currently returns "not implemented".
         getInvoice: (opts) => request("getInvoice", opts || {}),
         on(event, cb) { listeners[event]?.add(cb); },
