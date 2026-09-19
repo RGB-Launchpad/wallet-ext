@@ -189,6 +189,7 @@ async function serve(bot) {
             } else if (s.state === "BUYER_SIGNED" && s.buyerPsbt) {
                 const r = await bot.call("swapFinish", { offerId: o.offerId, apiBase: API, psbt: s.buyerPsbt });
                 await api(bot, "POST", `/v1/p2p/sessions/${s.sessionId}/broadcast`, { txid: r.txid });
+                bot.pendingSale = r.txid;
                 log(bot, "sold", o.offerId, "broadcast", r.txid);
             }
         } catch (e) { log(bot, "session", s.sessionId, "failed:", e.message); }
@@ -218,7 +219,12 @@ for (let round = 0; ; round++) {
             if (bot.crashed) await bot.reopen();
             const open = await serve(bot);
             // Relist once the offer is gone (sold, expired or withdrawn) and stock remains.
-            if (open === 0 && bot.amount && round % 6 === 0) {
+            // Not while a sale is unconfirmed: the wallet can still count what it just sold.
+            if (bot.pendingSale) {
+                const st = await (await fetch(`https://regtest-indexer.rgblaunchpad.meme/regtest/api/tx/${bot.pendingSale}/status`)).json().catch(() => ({}));
+                if (st.confirmed) { bot.pendingSale = null; await bot.call("refresh").catch(() => {}); }
+            }
+            if (open === 0 && bot.amount && !bot.pendingSale && round % 6 === 0) {
                 if ((await holding(bot)).max >= bot.amount) await list(bot, bot.amount);
             }
             if (round % 12 === 0) await bot.call("refresh").catch(() => {});
