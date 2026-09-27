@@ -1,0 +1,5 @@
+# wasm-pack writes "*" here, which kept the built engine out of the repository and left a
+# fresh clone unable to run. The engine is tracked on purpose, so this file ignores nothing.
+#
+# A rebuild overwrites it with "*" again; that shows up as a modified file in git status.
+# Restore this comment rather than committing the "*" back.

@@ -1,0 +1,319 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Darkhorse Wallet</title>
+<link rel="stylesheet" href="popup.css">
+<div id="app">
+  <header id="hdr" hidden>
+    <div id="hMain" class="hrow">
+      <img src="img/logo.webp" alt="Darkhorse" class="logo">
+      <span id="net" class="pill"><i class="dot"></i><span></span></span>
+      <span class="grow"></span>
+      <button id="expand" class="icon" title="Open in a tab so it stays open" aria-label="Open in a tab">
+        <svg viewBox="0 0 24 24"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7"/></svg></button>
+      <button id="gear" class="icon" title="Settings" aria-label="Settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
+      <button id="lock" class="icon" title="Lock" aria-label="Lock" hidden>
+        <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></button>
+    </div>
+    <div id="hSub" class="hrow sub" hidden>
+      <button id="hBack" class="icon back" aria-label="Back">
+        <svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <span id="hTitle"></span>
+    </div>
+  </header>
+
+  <!-- ---------- first run ---------- -->
+  <section id="welcome" class="screen art" hidden>
+    <button class="icon corner" data-gear title="Settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
+    <div class="hero">
+      <img src="img/logo.webp" alt="Darkhorse" class="logo xl" data-rise>
+      <div class="wordmark" data-rise>DARKHORSE<span>WALLET</span></div>
+      <p data-rise>RGB assets on Bitcoin, validated on your own device.</p>
+    </div>
+    <div class="foot">
+      <button class="primary" data-start="new" data-rise>Create a new wallet</button>
+      <button class="secondary" data-start="import" data-rise>I have a recovery phrase</button>
+      <span class="fine center" data-rise>Keys and consignments never leave this device.</span>
+    </div>
+  </section>
+
+  <section id="setup" class="screen" hidden>
+    <div class="body">
+      <div id="setupSteps" class="steps"><i class="on"></i><i></i></div>
+      <p id="setupLead" class="lead"></p>
+      <label id="mnemonicBox" class="fld" hidden><span>Recovery phrase</span>
+        <textarea id="mnemonicIn" rows="3" class="num" placeholder="12 or 24 words, space separated"></textarea></label>
+      <label class="fld"><span>Password</span>
+        <input id="pw1" type="password" placeholder="8+ characters" autocomplete="new-password"></label>
+      <label class="fld"><span>Repeat password</span>
+        <input id="pw2" type="password" autocomplete="new-password"></label>
+      <div class="note gold"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+        <span>The password encrypts your recovery phrase on this device. There is no password recovery.</span></div>
+      <div id="setupErr" class="err" hidden></div>
+    </div>
+    <div class="foot"><button id="doCreate" class="primary">Create wallet</button></div>
+  </section>
+
+  <section id="seed" class="screen" hidden>
+    <div class="body">
+      <div class="steps"><i class="on"></i><i class="on"></i></div>
+      <p class="lead">Step 2 of 2 · Write these words down in order.</p>
+      <div id="seedWords" class="words"></div>
+      <div class="note gold stack">
+        <div><svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M16 7l3 3"/></svg>
+          <span>Anyone with these words controls the wallet. Keep them offline.</span></div>
+        <div><svg viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18v.5"/></svg>
+          <span>Restore them only in an RGB wallet. An ordinary Bitcoin wallet cannot see RGB allocations,
+            and spending one destroys the assets permanently.</span></div>
+        <div><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.5 8-8 9-4.5-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>The words alone do not bring back RGB assets. Export a backup as well.</span></div>
+      </div>
+      <label class="check"><input type="checkbox" id="seedOk"> Written down and stored offline</label>
+    </div>
+    <div class="foot"><button id="seedDone" class="primary" disabled>Continue</button></div>
+  </section>
+
+  <section id="locked" class="screen art" hidden>
+    <button class="icon corner" data-gear title="Settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
+    <div class="hero">
+      <img src="img/logo.webp" alt="Darkhorse" class="logo lg" data-rise>
+      <div class="display" data-rise>Welcome back</div>
+      <span id="netLocked" class="pill" data-rise hidden><i class="dot"></i><span></span></span>
+    </div>
+    <div class="foot">
+      <div id="lockMsg" class="note plain" hidden></div>
+      <label class="fld" data-rise><span>Password</span>
+        <input id="pwUnlock" type="password" autocomplete="current-password"></label>
+      <div id="lockErr" class="err" hidden></div>
+      <button id="doUnlock" class="primary" data-rise>Unlock</button>
+    </div>
+  </section>
+
+  <!-- ---------- the wallet ---------- -->
+  <section id="main" class="screen" hidden>
+    <div id="v-home" class="view">
+      <div class="body">
+        <div id="btcCard" class="card hero-card" role="button" tabindex="0" title="Bitcoin: receive and balances">
+          <div class="hc-top">
+            <button id="idAddr" class="chip num" title="Identity address. Click to copy" hidden></button>
+            <span class="grow"></span>
+            <button id="doRefresh" class="sync" title="Sync with the network and validate">
+              <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5M4 13a8 8 0 0 0 14.6 4.5"/><path d="M5 3v4h4M19 21v-4h-4"/></svg>
+              <span id="refreshMs">Sync</span></button>
+          </div>
+          <div class="hc-bal">
+            <span class="coin btc">₿</span>
+            <span class="grow col">
+              <span class="figure"><span id="btcBig">—</span> <small>BTC</small></span>
+              <span class="fine">Bitcoin · pays network fees</span>
+            </span>
+          </div>
+        </div>
+        <div class="acts">
+          <button data-view="recv"><span class="ball lemon"><svg viewBox="0 0 24 24"><path d="M12 4v14M6 12l6 6 6-6M5 21h14"/></svg></span>Receive</button>
+          <button data-view="send"><span class="ball lemon"><svg viewBox="0 0 24 24"><path d="M12 20V6M6 12l6-6 6 6M5 3h14"/></svg></span>Send</button>
+          <button data-view="hist"><span class="ball"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>Activity</button>
+          <button data-view="backup"><span class="ball"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.5 8-8 9-4.5-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></span>Backup</button>
+        </div>
+        <div id="banner" hidden></div>
+        <div id="chainReset" class="note gold stack" hidden>
+          <span>The Regtest chain was rebuilt, so this wallet's Regtest history no longer matches it.
+            Resetting clears Regtest data on this device. Signet is not touched.</span>
+          <button id="doChainReset" class="secondary sm">Reset Regtest data</button>
+        </div>
+        <div class="list">
+          <div class="listhead"><span id="assetCount" class="eyebrow">Assets</span><span class="eyebrow">Balance</span></div>
+          <div id="homeList"><p class="fine pad">Loading…</p></div>
+        </div>
+        <div id="homeErr" class="err" hidden></div>
+      </div>
+    </div>
+
+    <div id="v-recv" class="view" hidden>
+      <div class="body">
+        <div class="seg"><button data-recv="rgb" class="on">RGB asset</button><button data-recv="btc">Bitcoin</button></div>
+        <div id="recv-rgb" class="stack-14">
+          <div id="noBackupWarn" class="note gold stack" hidden>
+            <span>No backup exported yet. If this device is lost, the recovery phrase alone will not restore the assets.</span>
+            <div class="row"><button id="goBackup" class="secondary sm">Back up now</button>
+              <button id="anyway" class="ghost sm">Continue anyway</button></div>
+          </div>
+          <div id="invoiceBox" class="card center-col" hidden>
+            <div id="invoiceQr" class="qr"></div>
+            <div class="copyline"><code id="invoice" class="num"></code>
+              <button id="copyInvoice" class="chip-btn"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><span>Copy</span></button></div>
+            <span class="fine" id="invoiceExp"></span>
+          </div>
+          <div id="invoiceEmpty" class="card empty">
+            <svg viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
+            <span>Create an invoice and give it to the sender. Each invoice is used once.</span>
+          </div>
+          <div class="card slim row">
+            <span class="grow col"><span>Receive slots <b id="slots" class="num">—</b></span>
+              <span class="fine">Each incoming transfer uses one. Adding slots costs an on-chain fee and
+                takes 1 confirmation. With none ready the invoice still works — the sender creates the
+                output instead, and can see which one it is.</span></span>
+            <button id="doPrepare" class="secondary sm">Add slots</button>
+          </div>
+          <div id="recvMsg" class="fine" hidden></div>
+          <div id="recvErr" class="err" hidden></div>
+        </div>
+        <div id="recv-btc" class="stack-14" hidden>
+          <p class="fine">Receives plain Bitcoin, used for network fees.</p>
+          <div class="card center-col"><div id="btcQr" class="qr"></div></div>
+          <div class="card slim copyline"><code id="btcAddr" class="num">—</code>
+            <button id="copyAddr" class="chip-btn"><svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><span>Copy</span></button></div>
+          <div id="btcBal" class="card slim kv"></div>
+        </div>
+      </div>
+      <div id="recvFoot" class="foot"><button id="doInvoice" class="primary">New invoice</button></div>
+    </div>
+
+    <div id="v-send" class="view" hidden>
+      <div class="body">
+        <div class="seg"><button data-send="rgb" class="on">RGB asset</button><button data-send="btc">Bitcoin</button></div>
+        <div id="send-rgb" class="stack-12">
+          <label class="fld"><span>Recipient invoice</span>
+            <textarea id="sInvoice" rows="3" class="num" placeholder="rgb:…"></textarea></label>
+          <div id="decoded" class="card slim kv" hidden></div>
+          <label class="fld"><span>Asset</span><select id="sAsset"></select></label>
+          <label class="fld"><span>Amount<em id="sUnit"></em><button type="button" id="sMax" class="link" hidden></button></span>
+            <input id="sAmount" class="num" placeholder="0.0" inputmode="decimal"></label>
+          <label class="fld"><span>Network fee · sat/vB</span><input id="sFee" type="number" min="1" class="num"></label>
+          <p class="fine" id="sFeeHint"></p>
+        </div>
+        <div id="send-btc" class="stack-12" hidden>
+          <p class="fine">Spends plain Bitcoin only. UTXOs holding RGB assets are never touched.</p>
+          <label class="fld"><span>Bitcoin address</span><input id="bAddr" class="num" placeholder="bc1…"></label>
+          <label class="fld"><span>Amount
+              <span class="units"><button type="button" id="bUnitBtc" class="unit on">BTC</button><button type="button" id="bUnitSat" class="unit">sats</button></span></span>
+            <input id="bAmount" class="num" placeholder="0.001" inputmode="decimal"></label>
+          <p class="fine" id="bAmountHint"></p>
+          <p class="fine" id="bAvail"></p>
+          <label class="fld"><span>Network fee · sat/vB</span><input id="bFee" type="number" min="1" class="num"></label>
+          <p class="fine" id="bFeeHint"></p>
+        </div>
+        <div id="sendErr" class="err" hidden></div>
+        <div id="sendOut" class="note ok" hidden></div>
+      </div>
+      <div class="foot">
+        <button id="doSendRgb" class="primary">Send</button>
+        <button id="doSendBtc" class="primary" hidden>Send</button>
+      </div>
+    </div>
+
+    <div id="v-hist" class="view" hidden>
+      <div class="body">
+        <div class="row">
+          <div class="seg grow"><button data-hf="all" class="on">All</button><button data-hf="open">In progress</button><button data-hf="done">Done</button></div>
+          <button id="doHist" class="icon" title="Refresh" aria-label="Refresh">
+            <svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.6-4.5M4 13a8 8 0 0 0 14.6 4.5"/><path d="M5 3v4h4M19 21v-4h-4"/></svg></button>
+        </div>
+        <div id="histList" class="card rows"></div>
+      </div>
+      <div class="foot">
+        <div class="note plain row"><span id="cleanMsg" class="grow">Expired invoices hold on to receive slots.</span>
+          <button id="doCleanup" class="secondary sm">Clear</button></div>
+      </div>
+    </div>
+
+    <div id="v-backup" class="view" hidden>
+      <div class="body">
+        <div class="note gold"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.5-3.5 8-8 9-4.5-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>The recovery phrase alone does not restore RGB assets. Export a backup after receiving new assets.</span></div>
+        <label class="fld"><span>Backup password</span>
+          <input id="bkPw" type="password" placeholder="8+ characters" autocomplete="new-password"></label>
+        <div id="bkOut" class="fine"></div>
+        <details class="card slim">
+          <summary>Restore from backup</summary>
+          <div class="stack-12">
+            <p class="fine">Import the same recovery phrase first, then select the backup file.</p>
+            <input id="rsFile" type="file" accept=".bin,application/octet-stream">
+            <input id="rsPw" type="password" placeholder="Backup password">
+            <button id="doRestore" class="secondary">Restore</button>
+            <div id="rsOut" class="fine"></div>
+          </div>
+        </details>
+      </div>
+      <div class="foot"><button id="doBackup" class="primary">Export encrypted backup</button></div>
+    </div>
+  </section>
+
+  <!-- ---------- settings, reachable while locked ---------- -->
+  <section id="settings-view" class="screen" hidden>
+    <div class="body">
+      <div class="group"><div class="eyebrow">Wallet</div>
+        <div class="glist">
+          <label class="gitem"><span class="grow">Network</span><select id="stNetwork" class="inline"></select></label>
+          <button class="gitem" data-more="sitesBox"><span class="grow">Connected sites</span><span id="sitesCount" class="gval"></span><svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+          <div id="sitesBox" class="gmore" hidden>
+            <p class="fine">These sites can see your identity address and request signatures. Every signature still needs your approval.</p>
+            <div id="sitesList"></div>
+          </div>
+          <button id="stBackup" class="gitem" hidden><span class="grow">Backup</span><span id="stBackupVal" class="gval"></span><svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+        </div>
+      </div>
+      <div class="group"><div class="eyebrow">Security</div>
+        <div class="glist">
+          <button class="gitem" data-more="cpBox"><span class="grow">Change password</span><svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+          <div id="cpBox" class="gmore" hidden>
+            <input id="cpOld" type="password" placeholder="Current password" autocomplete="current-password">
+            <input id="cpNew" type="password" placeholder="New password (8+ characters)" autocomplete="new-password">
+            <button id="doChangePw" class="secondary">Change password</button>
+          </div>
+        </div>
+      </div>
+      <div class="group"><div class="eyebrow">Advanced</div>
+        <div class="glist">
+          <button class="gitem" data-more="esBox"><span class="grow">Indexer</span><span id="stEsploraVal" class="gval"></span><svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+          <div id="esBox" class="gmore" hidden>
+            <label class="fld"><span>Esplora HTTP</span><input id="stEsplora" class="num" placeholder="https://…/api"></label>
+          </div>
+          <button class="gitem" data-more="rgBox"><span class="grow">Asset index</span><span id="stRegistryVal" class="gval"></span><svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+          <div id="rgBox" class="gmore" hidden>
+            <label class="fld"><span>RGBMap-compatible index</span><input id="stRegistry" class="num" placeholder="https://api.rgbmap.org"></label>
+            <p class="fine">Asset names and warnings about lookalike tickers. The wallet asks for a
+              network's whole asset list, never for the assets you hold, and caches it. Clear the
+              field to turn it off, or point it at an index of your own.</p>
+          </div>
+          <button class="gitem" data-more="issueBox"><span class="grow">Issue an asset</span><svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+          <div id="issueBox" class="gmore" hidden>
+            <label class="fld"><span>Ticker</span><input id="isTicker" maxlength="8" placeholder="TICKER"></label>
+            <label class="fld"><span>Name</span><input id="isName" maxlength="32" placeholder="Asset name"></label>
+            <label class="fld"><span>Supply</span><input id="isAmount" class="num" inputmode="numeric" placeholder="1000000"></label>
+            <label class="fld"><span>Decimals</span><input id="isPrecision" class="num" inputmode="numeric" value="0"></label>
+            <p class="fine">The supply is fixed and all of it is issued to this wallet. Issuing uses
+              one receive slot. The asset is not listed anywhere: whoever you send it to sees a
+              contract ID and nothing else.</p>
+            <button id="doIssue" class="secondary">Issue</button>
+            <div id="issueMsg" class="fine" hidden></div>
+            <div id="issueErr" class="err" hidden></div>
+          </div>
+          <button class="gitem" data-more="pxBox"><span class="grow">RGB proxy</span><span id="stProxyVal" class="gval"></span><svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+          <div id="pxBox" class="gmore" hidden>
+            <label class="fld"><span>JSON-RPC endpoint</span><input id="stProxy" class="num" placeholder="rpc://…/json-rpc"></label>
+          </div>
+        </div>
+      </div>
+      <div class="group"><div class="eyebrow">Danger zone</div>
+        <div class="glist">
+          <button class="gitem danger" data-more="wipeBox"><span class="grow">Erase this wallet</span><svg class="chev" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+          <div id="wipeBox" class="gmore" hidden>
+            <p class="fine">Deletes the recovery phrase and all consignments from this device.
+              Without a backup the assets cannot be recovered.</p>
+            <label class="check"><input type="checkbox" id="wipeOk"> I have a backup</label>
+            <button id="doWipe" class="danger-btn" disabled>Erase</button>
+          </div>
+        </div>
+      </div>
+      <div id="stMsg" class="fine center"></div>
+      <div id="stVersion" class="fine center num dim"></div>
+      <p class="credit center">RGB engine: <a href="https://github.com/RGB-Tools/rgb-lib" target="_blank" rel="noreferrer noopener">rgb-lib</a> by RGB-Tools, with <a href="https://github.com/UTEXO-Protocol/rgb-lib-wasm" target="_blank" rel="noreferrer noopener">WASM bindings</a> maintained by UTEXO. MIT.</p>
+    </div>
+    <div id="stFoot" class="foot" hidden><button id="doSaveSettings" class="primary">Save network settings</button></div>
+  </section>
+</div>
+<script src="vendor/qrcode-generator.js"></script>
+<script type="module" src="popup.js"></script>

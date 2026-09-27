@@ -1,0 +1,27 @@
+<!doctype html><meta charset="utf-8"><title>identity probe</title><pre id="out">running…</pre>
+<script type="module">
+// One wallet per page load. The runner opens this in a fresh browser context each time,
+// which is what an uninstall/reinstall leaves behind: empty IndexedDB, same mnemonic.
+import init, { generateKeys, restoreKeys, WasmWallet } from "../../pkg/rgb_lib_wasm_bindings.js";
+const out = document.getElementById("out");
+const NET = "Signet";
+try {
+  await init();
+  // ?m=<mnemonic> restores; no parameter generates a new one.
+  const given = new URLSearchParams(location.search).get("m");
+  const mnemonic = given || generateKeys(NET).mnemonic;
+  const keys = restoreKeys(NET, mnemonic);
+  const w = await WasmWallet.create(JSON.stringify({
+    dataDir: `:memory:/${NET}`, bitcoinNetwork: NET, databaseType: "Sqlite",
+    maxAllocationsPerUtxo: 5,
+    accountXpubVanilla: keys.accountXpubVanilla, accountXpubColored: keys.accountXpubColored,
+    mnemonic, masterFingerprint: keys.masterFingerprint,
+    vanillaKeychain: null, supportedSchemas: ["Nia", "Ifa"], reuseAddresses: true,
+  }));
+  await w.flush();
+  out.textContent = JSON.stringify({ mnemonic, address: w.getAddress(), again: w.getAddress() });
+} catch (e) {
+  out.textContent = JSON.stringify({ error: e && e.stack ? e.stack : String(e) });
+}
+document.title = "done";
+</script>

@@ -1,0 +1,25 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Darkhorse Wallet · Request</title>
+<link rel="stylesheet" href="popup.css">
+<body class="approve">
+<div id="app">
+  <header>
+    <div class="hrow">
+      <img src="img/logo.webp" alt="" class="logo" style="width:22px;height:22px;border-radius:6px">
+      <span class="wordmark" style="flex-direction:row;align-items:baseline;gap:8px;font-size:13px">DARKHORSE<span style="font-size:10px;letter-spacing:.24em">WALLET</span></span>
+      <span class="grow"></span>
+      <span id="net" class="pill" hidden><i class="dot"></i><span></span></span>
+    </div>
+  </header>
+  <div id="body" class="body"><p class="fine">Loading…</p></div>
+  <div class="foot">
+    <div id="err" class="err" hidden></div>
+    <div class="row pair" id="actions" hidden>
+      <button id="reject" class="secondary">Reject</button>
+      <button id="approve" class="primary">Approve</button>
+    </div>
+  </div>
+</div>
+<script type="module" src="approve.js"></script>
+</body>

@@ -1,0 +1,61 @@
+<!doctype html><meta charset="utf-8"><title>chain reset probe</title><pre id="out">running…</pre>
+<script type="module">
+// The Regtest reset against the real engine and real IndexedDB: it must delete that network's
+// snapshot, leave Signet's alone, and leave the database usable by rgb-lib afterwards.
+import init, { generateKeys, restoreKeys, WasmWallet } from "../../pkg/rgb_lib_wasm_bindings.js";
+import { SNAPSHOT_DB, SNAPSHOT_STORE, dataDirOf, snapshotPrefix, deleteSnapshots } from "../../lib/chain.js";
+const out = document.getElementById("out");
+
+const keysInDb = () => new Promise((res, rej) => {
+  const open = indexedDB.open(SNAPSHOT_DB);
+  open.onerror = () => rej(open.error);
+  open.onsuccess = () => {
+    const db = open.result;
+    const req = db.transaction(SNAPSHOT_STORE).objectStore(SNAPSHOT_STORE).getAllKeys();
+    req.onsuccess = () => { db.close(); res(req.result); };
+    req.onerror = () => { db.close(); rej(req.error); };
+  };
+});
+
+async function open(net, mnemonic) {
+  const keys = restoreKeys(net, mnemonic);
+  const w = await WasmWallet.create(JSON.stringify({
+    dataDir: dataDirOf(net), bitcoinNetwork: net, databaseType: "Sqlite",
+    maxAllocationsPerUtxo: 5,
+    accountXpubVanilla: keys.accountXpubVanilla, accountXpubColored: keys.accountXpubColored,
+    mnemonic, masterFingerprint: keys.masterFingerprint,
+    vanillaKeychain: null, supportedSchemas: ["Nia", "Ifa"], reuseAddresses: true,
+  }));
+  await w.flush();
+  return w;
+}
+
+try {
+  await init();
+  const r = {};
+  // A browser that never ran the wallet: nothing to delete, and no half-made database left.
+  r.removedFromMissingDb = await deleteSnapshots(snapshotPrefix("Regtest"));
+
+  const mnemonic = generateKeys("Regtest").mnemonic;
+  const regtest = await open("Regtest", mnemonic);
+  const signet = await open("Signet", mnemonic);
+  r.signetAddress = signet.getAddress();
+  r.keysBefore = await keysInDb();
+  // The extension closes the engine first; here the instances are freed instead.
+  regtest.free(); signet.free();
+
+  r.removed = await deleteSnapshots(snapshotPrefix("Regtest"));
+  r.keysAfter = await keysInDb();
+
+  // Both networks open again: Regtest from nothing, Signet from its kept snapshot.
+  const regtest2 = await open("Regtest", mnemonic);
+  const signet2 = await open("Signet", mnemonic);
+  r.signetAddressAgain = signet2.getAddress();
+  r.keysReopened = await keysInDb();
+  regtest2.free(); signet2.free();
+  out.textContent = JSON.stringify(r);
+} catch (e) {
+  out.textContent = JSON.stringify({ error: e && e.stack ? e.stack : String(e) });
+}
+document.title = "done";
+</script>
