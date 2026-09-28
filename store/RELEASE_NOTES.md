@@ -16,7 +16,7 @@ Chrome 137 disabled the `--load-extension` switch, so the extension is loaded by
 
 ---
 
-**What is in the zip.** 54 files, all of them listed by `unzip -l`. Everything except `pkg/` is
+**What is in the zip.** 55 files, all of them listed by `unzip -l`. Everything except `pkg/` is
 our own code, minified file by file; `pkg/` is the RGB engine:
 [rgb-lib-wasm](https://github.com/UTEXO-Protocol/rgb-lib-wasm) (MIT), the WebAssembly bindings
 of [rgb-lib](https://github.com/RGB-Tools/rgb-lib) maintained by UTEXO, built from commit

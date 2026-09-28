@@ -91,7 +91,7 @@ without an answer. Select **"No, I am not using remote code"**, and justify:
 > makes network requests only to read Bitcoin chain data from an indexer and to relay RGB
 > consignments. Both return data, never code.
 
-Verifiable from the package: `unzip -l` lists all 35 files, and none of the scripts contain
+Verifiable from the package: `unzip -l` lists all 55 files, and none of the scripts contain
 a remote `import()`, an external `<script src>` or a call to `eval`.
 
 ## Data use disclosures
