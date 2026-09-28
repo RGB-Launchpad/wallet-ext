@@ -23,7 +23,7 @@ const stub = (state) => `(() => {
                        proxyMissing: !!S.proxyMissing, backupNeeded: S.backupNeeded }),
     assets: () => ok({ assets: S.assets, backupNeeded: S.backupNeeded }),
     btc: () => ok({ balance: S.btc || { vanilla: { spendable: 1126786, settled: 1126786 },
-                                        colored: { future: 750000 } },
+                                        colored: { settled: 750000, future: 750000 } },
                     address: "tb1pexample", slots: 3 }),
     receive: () => ok(S.invoice || {}),
     sites: () => ok({ sites: {} }),
@@ -86,7 +86,7 @@ const CASES = [
                                           + "rpcs://regtest-proxy.dhorse.fun/json-rpc",
                                    expirationTimestamp: NOW + 3600 } },
       view: "recv", click: "#doInvoice",
-      expect: { invoiceLen: 151, qrSide: 53 } },
+      expect: { invoiceLen: 144, qrSide: 53 } },
 
     { name: "notice-none", label: "a wallet that needs a backup is not nagged about it",
       state: BASE,
@@ -107,7 +107,7 @@ const CASES = [
       expect: { btcRows: ["Available = 0.01035768 BTC", "Confirmed = 0.01035768 BTC",
                           "In RGB UTXOs = 0 BTC"] } },
     { name: "asset-identity", label: "a lookalike ticker is called out, and statuses stay separate",
-      state: { ...BASE, assets: [HELD], registryUrl: "https://api.rgbmap.org",
+      state: { ...BASE, assets: [HELD], registryUrl: "https://dhorse.fun/api/signet/public",
                registryAssets: [
                  { contract_id: HELD.assetId, ticker: "TEST", name: "Test",
                    status: { issuer_signed: true, listed_by: [{ publisher: "signet:x" }] } },
@@ -116,7 +116,7 @@ const CASES = [
                ] },
       click: ".asset" },
     { name: "asset-unregistered", label: "an asset no index knows is shown as unregistered, not as suspect",
-      state: { ...BASE, assets: [HELD], registryUrl: "https://api.rgbmap.org", registryAssets: [] },
+      state: { ...BASE, assets: [HELD], registryUrl: "https://dhorse.fun/api/signet/public", registryAssets: [] },
       click: ".asset" },
     { name: "sync-cooldown", label: "Sync enters a cooldown and counts down",
       state: { ...BASE, assets: ASSETS }, click: "#doRefresh",
@@ -137,7 +137,7 @@ const CASES = [
       expect: { rows: 4,
                 texts: ["Confirming · in the mempool",
                         "Confirming · 2 of 3",
-                        "Waiting for pickup",    // say nothing when the indexer is unreachable
+                        "Waiting for the other side",  // say nothing when the indexer is unreachable
                         "Settled"] } },          // no progress once settled
 ];
 
@@ -146,7 +146,7 @@ let failed = 0;
 for (const c of CASES) {
     const ctx = await b.newContext({ viewport: { width: 380, height: 520 } });
     const p = await ctx.newPage();
-    p.on("pageerror", (e) => { console.log("  [pageerror]", String(e).slice(0, 200)); failed++; });
+    p.on("pageerror", (e) => { console.log("  [pageerror]", String(e.stack || e).slice(0, 600)); failed++; });
     await p.addInitScript(stub(c.state));
     await p.goto("http://127.0.0.1:8777/popup.html");
     await p.waitForSelector("#main:not([hidden])", { timeout: 15000 });

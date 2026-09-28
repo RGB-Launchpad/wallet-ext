@@ -12,7 +12,7 @@
   ],
   "host_permissions": [
     "https://mempool.space/*",
-    "https://api.rgbmap.org/*",
+    "https://dhorse.fun/*",
     "https://proxy.dhorse.fun/*",
     "https://regtest-proxy.dhorse.fun/*",
     "https://regtest-indexer.dhorse.fun/*"

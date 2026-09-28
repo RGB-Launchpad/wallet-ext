@@ -77,8 +77,7 @@ assets, and sign messages for sites the user authorizes.
 | `unlimitedStorage` | RGB consignments are the only proof of asset ownership and grow with transfer history; eviction would make assets unrecoverable. |
 | `tabs` | Notifies an open page when the user revokes that site's access, so the page stops acting as connected. |
 | Host access to `mempool.space`, `proxy.dhorse.fun`, `regtest-proxy.dhorse.fun`, `regtest-indexer.dhorse.fun` | The default Bitcoin indexer and RGB consignment relay for each supported network. Nothing else is contacted unless the user configures it. |
-| Host access to `api.rgbmap.org` | The asset index, read to show an asset's name and to warn when two contracts share a ticker. The whole list for one network is requested; the index is never told which assets the wallet holds, and the request carries no identifier. |
-| Content scripts on `dhorse.fun`, `127.0.0.1`, `localhost` | Exposes `window.rgb` so the platform, and a local copy of it during development, can request sign-in. A site sees nothing until the user approves it in the extension. |
+| Content scripts on `dhorse.fun`, `127.0.0.1`, `localhost`, plus host access to `dhorse.fun` | Exposes `window.rgb` so the platform, and a local copy of it during development, can request sign-in — a site sees nothing until the user approves it in the extension — and reads the asset index: one network's whole list at a time, matched locally, so the index is never told which assets the wallet holds, and the request carries no identifier. |
 | Optional host access | Requested only when the user configures a different indexer, proxy or platform endpoint. |
 
 ## Remote code

@@ -8,7 +8,7 @@ export const NETWORKS = {
         esplora: "https://mempool.space/api",
         // Asset identity. Read-only, and asked for the whole list rather than per asset, so it
         // never learns which contracts this wallet holds (lib/registry.js).
-        registry: "https://api.rgbmap.org",
+        registry: "https://dhorse.fun/api/mainnet/public",
         proxy: "rpcs://proxy.dhorse.fun/json-rpc",
         fee: { safety: 1.25, min: 2, max: 100 },
     },
@@ -16,7 +16,7 @@ export const NETWORKS = {
         label: "Signet",
         // Esplora over HTTP: browsers have no TCP.
         esplora: "https://mempool.space/signet/api",
-        registry: "https://api.rgbmap.org",
+        registry: "https://dhorse.fun/api/signet/public",
         // Consignment relay. It sees recipient identifiers, so it is our own deployment.
         proxy: "rpcs://proxy.dhorse.fun/json-rpc",
     },

@@ -365,8 +365,9 @@ async function loadHome({ rise = false } = {}) {
  * What an index says about an asset, one line per fact.
  *
  * 🚨 Never a single verdict. "Signed" means a key claimed the asset; "verified" means that key
- * was tied to a domain or account; "reviewed" means RGBMap looked at an issuer's papers. None
- * of them says an asset is safe, and an asset nobody registered is not thereby suspicious.
+ * was tied to a domain or account; "reviewed" means the index operator looked at an issuer's
+ * papers. None of them says an asset is safe, and an asset nobody registered is not thereby
+ * suspicious.
  */
 function identityLines(id) {
     if (!id) return "";
@@ -384,7 +385,7 @@ function identityLines(id) {
         return lines.join("");
     }
 
-    const issuer = id.issuerIdentified ? "reviewed by RGBMap"
+    const issuer = id.issuerIdentified ? "reviewed by the index operator"
         : id.issuerVerified ? "verified against a domain or account"
         : id.issuerSigned ? "signed by a key, with no identity proof"
         : "no issuer has claimed it";

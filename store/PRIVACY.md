@@ -31,14 +31,14 @@ The extension talks to the endpoints you configure. Nothing else.
 |---|---|---|---|
 | Bitcoin indexer (Esplora) | Your addresses and transaction ids, to read balances and to broadcast | `mempool.space` on Mainnet, Signet and Testnet4 | A third party |
 | RGB proxy | Consignment files and the recipient identifier each one is addressed to | `proxy.dhorse.fun` | **This team** |
-| Asset index | A request for one network's whole asset list. **Not the assets you hold** | `api.rgbmap.org` | **RGBMap**, run by this team |
+| Asset index | A request for one network's whole asset list. **Not the assets you hold** | `dhorse.fun` | **This team** |
 
 The asset index supplies names and warns when two contracts share a ticker. The wallet asks
 for a network's whole list and matches it locally, so the index is never told which contracts
 you own; the list is cached, and the request carries no identifier. Clear the field in settings
 to turn it off, or point it at an index you run yourself.
 
-**The RGB proxy is ours, and this is the one place your data reaches a server we run.** A
+**The RGB proxy and the asset index are ours; those are the places your data reaches a server we run.** A
 consignment is the record of an RGB transfer: it contains the asset, the amounts and the
 transfer's history. The proxy is a store-and-forward relay — it performs no validation and
 cannot read your keys, seed or password — but it necessarily receives that file and stores it
