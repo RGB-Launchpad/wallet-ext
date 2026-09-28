@@ -134,8 +134,7 @@ summary:focus-visible { outline: 2px solid var(--color-glow); outline-offset: 2p
 /* The running-horse banner on the welcome and unlock screens: transparent webm (mp4 fallback),
    decoded off the main thread; it replaces the static hero logo. */
 .hero:has(.herovid) { padding-top: 34px; }
-.herovid { width: 100%; aspect-ratio: 16 / 9; border-radius: var(--radius-card-lg); display: block;
-        border: 1px solid var(--color-line); box-shadow: 0 0 24px rgba(56,214,255,.12); }
+.herovid { width: 100%; aspect-ratio: 16 / 9; display: block; }
 .hero p { margin: 0; font-size: var(--text-lead-lg); line-height: 1.55; color: var(--color-ink-2); }
 .wordmark { font-family: var(--font-display); font-stretch: 125%; font-weight: 900; font-size: var(--text-wordmark); letter-spacing: .01em;
             display: flex; flex-direction: column; gap: var(--gap-2); }
