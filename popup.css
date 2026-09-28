@@ -188,6 +188,8 @@ input[type="checkbox"] { width: 18px; height: 18px; margin: 0; accent-color: var
 /* ---------- text ---------- */
 p { margin: 0; }
 .fine { font-size: var(--text-meta); color: var(--color-mute); }
+/* In-flight money under the headline figure: present, but not confirmed yet. */
+.fine.gold { color: var(--color-gold); }
 .fine.pad { padding: 10px 12px; }
 .dim { color: var(--color-mute-2); }
 .credit { font-size: var(--text-hint); color: var(--color-mute-2); line-height: 1.6; margin-top: 6px; }

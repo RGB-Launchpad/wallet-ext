@@ -317,9 +317,20 @@ async function loadHome({ rise = false } = {}) {
             $("idAddr").innerHTML = `<span>${esc(short(btcAddress))}</span>${ICON.copy}`;
             show("idAddr");
         }
-        const s = String(btc.data.balance?.vanilla?.spendable ?? "0");
+        // The headline counts confirmed coins only. `spendable` adds unconfirmed incoming
+        // UTXOs; as the big number that reads as money already owned, yet a dropped or
+        // replaced parent takes it back. Anything in flight gets its own line instead.
+        const vanilla = btc.data.balance?.vanilla;
+        const s = String(vanilla?.settled ?? "0");
+        btcSettled = s;
+        btcSpendable = String(vanilla?.spendable ?? s);
         motion.count($("btcBig"), shownSats === null ? 0 : Number(shownSats) / 1e8, Number(s) / 1e8, 8, sats.toBtc(s));
         shownSats = s;
+        const pending = BigInt(btcSpendable) - BigInt(s);
+        if (pending > 0n) {
+            $("btcPend").textContent = `+${sats.toBtc(pending.toString())} BTC waiting to confirm`;
+            show("btcPend");
+        } else show("btcPend", false);
     }
 
     if (!oc.ok) { box.innerHTML = `<div class="err fine pad">${esc(oc.err)}</div>`; return; }
@@ -604,6 +615,7 @@ $("copyAddr").onclick = () => copy($("btcAddr").textContent, $("copyAddr"));
 // ---------- bitcoin ----------
 // Only the vanilla path is spendable as plain BTC; colored UTXOs are never touched.
 let btcSpendable = null;
+let btcSettled = null;
 
 async function loadBtc() {
     const r = await call("btc");
@@ -612,6 +624,7 @@ async function loadBtc() {
     renderQr($("btcQr"), r.data.address);
     const { vanilla, colored } = r.data.balance;
     btcSpendable = String(vanilla.spendable);
+    btcSettled = String(vanilla.settled);
     // `spendable` is confirmed plus unconfirmed, not a subset of `settled` — the two are
     // shown as its parts so the labels cannot be read the other way round.
     const pending = BigInt(vanilla.spendable) - BigInt(vanilla.settled);
@@ -724,18 +737,27 @@ function syncBtcUnit() {
     syncBtcAmountHint();
 }
 
-/** Echoes the value in the other unit. */
+/** Echoes the value in the other unit, and flags amounts that reach into unconfirmed funds. */
 function syncBtcAmountHint() {
     btcSendLabel();
     const raw = $("bAmount").value.trim();
     const node = $("bAmountHint");
-    if (!raw) { node.textContent = ""; return; }
+    if (!raw) { node.textContent = ""; show("bPendHint", false); return; }
     try {
+        const amt = btcUnit === "btc" ? btcAmountToSats(raw) : raw;
         node.textContent = btcUnit === "btc"
-            ? `= ${btcAmountToSats(raw)} sats`
-            : `= ${satsAmountToBtc(raw)} BTC`;
+            ? `= ${amt} sats`
+            : `= ${satsAmountToBtc(amt)} BTC`;
+        // Spending unconfirmed coins is allowed, but the send only lives as long as the
+        // unconfirmed parent does. Say so; do not block.
+        if (btcSettled !== null && BigInt(amt) > BigInt(btcSettled)) {
+            $("bPendHint").textContent = "More than the confirmed balance — the rest is still " +
+                "waiting to confirm. If that transaction never confirms, this send fails with it.";
+            show("bPendHint");
+        } else show("bPendHint", false);
     } catch (e) {
         node.textContent = e.message || String(e);
+        show("bPendHint", false);
     }
 }
 

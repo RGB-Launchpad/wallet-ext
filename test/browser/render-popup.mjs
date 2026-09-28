@@ -106,6 +106,27 @@ const CASES = [
       view: "btc",
       expect: { btcRows: ["Available = 0.01035768 BTC", "Confirmed = 0.01035768 BTC",
                           "In RGB UTXOs = 0 BTC"] } },
+    { name: "home-pending", label: "the headline is the confirmed balance; unconfirmed gets its own line",
+      state: { ...BASE, btc: { vanilla: { spendable: 1141877, settled: 1035768 },
+                               colored: { future: 750000 } } },
+      wait: 900,           // the figure counts up for 700ms before the exact text lands
+      expect: { btcBig: "0.01035768", btcPend: "+0.00106109 BTC waiting to confirm" } },
+    { name: "home-all-confirmed", label: "no pending line under the headline when nothing is unconfirmed",
+      state: { ...BASE, btc: { vanilla: { spendable: 1035768, settled: 1035768 },
+                               colored: { future: 0 } } },
+      wait: 900,
+      expect: { btcBig: "0.01035768", btcPend: "" } },
+    { name: "send-unconfirmed-warn", label: "spending past the confirmed balance warns but does not block",
+      state: { ...BASE, btc: { vanilla: { spendable: 1141877, settled: 1035768 },
+                               colored: { future: 750000 } } },
+      view: "send", preClick: "[data-send=btc]", fill: { "#bAmount": "0.011" },
+      expect: { bPendHint: "More than the confirmed balance — the rest is still waiting to confirm. " +
+                           "If that transaction never confirms, this send fails with it." } },
+    { name: "send-within-confirmed", label: "an amount inside the confirmed balance gets no warning",
+      state: { ...BASE, btc: { vanilla: { spendable: 1141877, settled: 1035768 },
+                               colored: { future: 750000 } } },
+      view: "send", preClick: "[data-send=btc]", fill: { "#bAmount": "0.001" },
+      expect: { bPendHint: "" } },
     { name: "asset-identity", label: "a lookalike ticker is called out, and statuses stay separate",
       state: { ...BASE, assets: [HELD], registryUrl: "https://dhorse.fun/api/signet/public",
                registryAssets: [
@@ -152,16 +173,18 @@ for (const c of CASES) {
     await p.waitForSelector("#main:not([hidden])", { timeout: 15000 });
     // Bitcoin is the Bitcoin tab of Receive, reached from the balance card.
     if (c.view === "btc") {
-        await p.click("#btcCard .fine");
+        await p.click("#btcCard .figure");
         await p.waitForSelector("#recv-btc:not([hidden])", { timeout: 5000 });
     } else if (c.view) {
         await p.click(`[data-view="${c.view}"]`);
         await p.waitForSelector(`#v-${c.view}:not([hidden])`, { timeout: 5000 });
     }
+    // A tab inside the view may have to open before its inputs accept a fill.
+    if (c.preClick) await p.click(c.preClick);
     for (const [sel, value] of Object.entries(c.fill || {})) await p.fill(sel, value);
     // Some screens only show what matters after an action — the sync cooldown, for one.
     if (c.click) await p.click(c.click);
-    await p.waitForTimeout(300);
+    await p.waitForTimeout(c.wait || 300);
 
     const got = await p.evaluate(() => ({
         rows: document.querySelectorAll("#histList .tx").length,
@@ -172,6 +195,9 @@ for (const c of CASES) {
         maxLabel: document.getElementById("sMax").textContent,
         amountValue: document.getElementById("sAmount").value,
         sendErr: document.getElementById("sendErr").hidden ? "" : document.getElementById("sendErr").textContent,
+        btcBig: document.getElementById("btcBig").textContent,
+        btcPend: document.getElementById("btcPend").hidden ? "" : document.getElementById("btcPend").textContent,
+        bPendHint: document.getElementById("bPendHint").hidden ? "" : document.getElementById("bPendHint").textContent,
         syncDisabled: document.getElementById("doRefresh").disabled,
         syncLabel: document.getElementById("refreshMs").textContent,
         btcRows: [...document.querySelectorAll("#btcBal .r")].map((el) =>
