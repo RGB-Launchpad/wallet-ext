@@ -29,7 +29,7 @@ The extension talks to the endpoints you configure. Nothing else.
 
 | Endpoint | What is sent | Default | Operated by |
 |---|---|---|---|
-| Bitcoin indexer (Esplora) | Your addresses and transaction ids, to read balances and to broadcast | `mempool.space` on Mainnet and Testnet4; `signet-indexer.dhorse.fun` on Signet | A third party on Mainnet and Testnet4; **this team** on Signet |
+| Bitcoin indexer (Esplora) | Your addresses and transaction ids, to read balances and to broadcast | `mempool.space` on Mainnet, Signet and Testnet4 | A third party |
 | RGB proxy | Consignment files and the recipient identifier each one is addressed to | `proxy.dhorse.fun` | **This team** |
 | Asset index | A request for one network's whole asset list. **Not the assets you hold** | `dhorse.fun` | **This team** |
 
@@ -38,7 +38,7 @@ for a network's whole list and matches it locally, so the index is never told wh
 you own; the list is cached, and the request carries no identifier. Clear the field in settings
 to turn it off, or point it at an index you run yourself.
 
-**The RGB proxy, the asset index and the Signet indexer are ours; those are the places your data reaches a server we run.** A
+**The RGB proxy and the asset index are ours; those are the places your data reaches a server we run.** A
 consignment is the record of an RGB transfer: it contains the asset, the amounts and the
 transfer's history. The proxy is a store-and-forward relay — it performs no validation and
 cannot read your keys, seed or password — but it necessarily receives that file and stores it
@@ -65,7 +65,7 @@ beyond relaying it, and we do not use it to assess creditworthiness.
 
 ## Third parties
 
-The indexer on Mainnet and Testnet4 is operated by a third party and has its own policy. You can
+The default indexer is operated by a third party and has its own policy. You can
 replace any of the endpoints in the extension's settings.
 
 ## Deleting your data
