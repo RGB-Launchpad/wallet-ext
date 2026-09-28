@@ -8,12 +8,14 @@ Darkhorse Wallet
 
 ## Short description (132 characters max)
 
-Self-custodial wallet for RGB assets on Bitcoin. Keys and consignments stay on your device.
+Self-custodial wallet for RGB assets on Bitcoin. Your keys never leave this device.
 
 ## Detailed description
 
 Darkhorse Wallet holds RGB assets on Bitcoin. Your recovery phrase, private keys and consignments
-are generated and kept on your own device; nothing is sent to a server we control.
+are generated and kept on your own device, and your keys are never sent anywhere. A consignment
+in transit waits for its recipient on a store-and-forward relay operated by this team: it holds
+the file, never the keys.
 
 Features
 - Create or import a 12 or 24 word recovery phrase, encrypted with a password on this device
@@ -76,7 +78,7 @@ assets, and sign messages for sites the user authorizes.
 | `storage` | Stores the encrypted recovery phrase, settings, authorized sites and the wallet's own state. |
 | `unlimitedStorage` | RGB consignments are the only proof of asset ownership and grow with transfer history; eviction would make assets unrecoverable. |
 | `tabs` | Notifies an open page when the user revokes that site's access, so the page stops acting as connected. |
-| Host access to `mempool.space`, `proxy.dhorse.fun`, `regtest-proxy.dhorse.fun`, `regtest-indexer.dhorse.fun` | The default Bitcoin indexer and RGB consignment relay for each supported network. Nothing else is contacted unless the user configures it. |
+| Host access to `mempool.space`, `proxy.dhorse.fun`, `regtest-proxy.dhorse.fun`, `signet-indexer.dhorse.fun`, `regtest-indexer.dhorse.fun` | The default Bitcoin indexer and RGB consignment relay for each supported network. Nothing else is contacted unless the user configures it. |
 | Content scripts on `dhorse.fun`, `127.0.0.1`, `localhost`, plus host access to `dhorse.fun` | Exposes `window.rgb` so the platform, and a local copy of it during development, can request sign-in — a site sees nothing until the user approves it in the extension — and reads the asset index: one network's whole list at a time, matched locally, so the index is never told which assets the wallet holds, and the request carries no identifier. |
 | Optional host access | Requested only when the user configures a different indexer, proxy or platform endpoint. |
 

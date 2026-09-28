@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Darkhorse Wallet",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "Self-custodial RGB asset wallet. Keys and consignments stay on your device.",
   "permissions": [
     "offscreen",
