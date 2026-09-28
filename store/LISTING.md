@@ -78,8 +78,7 @@ assets, and sign messages for sites the user authorizes.
 | `storage` | Stores the encrypted recovery phrase, settings, authorized sites and the wallet's own state. |
 | `unlimitedStorage` | RGB consignments are the only proof of asset ownership and grow with transfer history; eviction would make assets unrecoverable. |
 | `tabs` | Notifies an open page when the user revokes that site's access, so the page stops acting as connected. |
-| Host access to `mempool.space`, `proxy.dhorse.fun`, `regtest-proxy.dhorse.fun`, `signet-indexer.dhorse.fun`, `regtest-indexer.dhorse.fun` | The default Bitcoin indexer and RGB consignment relay for each supported network. Nothing else is contacted unless the user configures it. |
-| Content scripts on `dhorse.fun`, `127.0.0.1`, `localhost`, plus host access to `dhorse.fun` | Exposes `window.rgb` so the platform, and a local copy of it during development, can request sign-in — a site sees nothing until the user approves it in the extension — and reads the asset index: one network's whole list at a time, matched locally, so the index is never told which assets the wallet holds, and the request carries no identifier. |
+| Host permission justification（后台只有一个框，两行合并贴这条） | The defaults contacted are the Bitcoin indexer for each network (`mempool.space`, `signet-indexer.dhorse.fun`, `regtest-indexer.dhorse.fun`), the RGB consignment relay (`proxy.dhorse.fun`, `regtest-proxy.dhorse.fun`), and the platform API (`dhorse.fun`) for the asset index — read a network's whole list at a time, so it never learns which assets the wallet holds. A content script on `dhorse.fun` (and a local copy during development) lets a site request sign-in; it sees nothing until the user approves it. Nothing else is contacted unless the user configures a different endpoint. |
 | Optional host access | Requested only when the user configures a different indexer, proxy or platform endpoint. |
 
 ## Remote code
