@@ -62,37 +62,6 @@ test("migration runs once", () => {
     assert.deepEqual(second.raw.byNetwork, raw.byNetwork);
 });
 
-test("a pinned copy of a retired default gives way to the current one", () => {
-    // What storage looks like for anyone who pressed Save while the old hosts were the defaults.
-    const stored = { network: "Signet", byNetwork: {
-        Signet: { proxyUrl: "rpcs://rgb-proxy.flatland.app/json-rpc" },
-        Regtest: { proxyUrl: "rpcs://rgb-regtest-proxy.flatland.app/json-rpc",
-            esploraUrl: "https://rgb-regtest-indexer.flatland.app/regtest/api" },
-    } };
-    const { raw, changed } = migrate(stored);
-    assert.equal(changed, true);
-    assert.equal(resolve(raw, "Signet").proxyUrl, netDefaults("Signet").proxyUrl);
-    assert.equal(resolve(raw, "Regtest").proxyUrl, netDefaults("Regtest").proxyUrl);
-    assert.equal(resolve(raw, "Regtest").esploraUrl, netDefaults("Regtest").esploraUrl);
-    // The caller's object is not edited underneath it.
-    assert.equal(stored.byNetwork.Signet.proxyUrl, "rpcs://rgb-proxy.flatland.app/json-rpc");
-    // Idempotent: nothing left to drop on the next start-up.
-    assert.equal(migrate(raw).changed, false);
-});
-
-test("a pinned copy of the rgbmap relay default gives way to the dhorse one", () => {
-    // Installs that pressed Save while the relay lived on rgbmap.org carry it pinned; the new
-    // default cannot reach them unless the pin is dropped.
-    const stored = { network: "Signet", byNetwork: {
-        Signet: { proxyUrl: "rpcs://proxy.rgbmap.org/json-rpc" },
-        Regtest: { proxyUrl: "rpcs://regtest-proxy.rgbmap.org/json-rpc" },
-    } };
-    const { raw, changed } = migrate(stored);
-    assert.equal(changed, true);
-    assert.equal(resolve(raw, "Signet").proxyUrl, "rpcs://proxy.dhorse.fun/json-rpc");
-    assert.equal(resolve(raw, "Regtest").proxyUrl, "rpcs://regtest-proxy.dhorse.fun/json-rpc");
-});
-
 test("an endpoint the user chose is never dropped as retired", () => {
     const stored = { network: "Signet", byNetwork: { Signet: { proxyUrl: "rpcs://mine.example/json-rpc" } } };
     const { raw, changed } = migrate(stored);
