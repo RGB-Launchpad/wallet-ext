@@ -143,5 +143,4 @@ anything in it is transparent.
       `python3 test/browser/serve.py & node store/screenshots.mjs store/screenshots`
 - [x] Privacy policy URL — the repository is public, so it is already hosted:
       `https://github.com/RGB-Launchpad/wallet-ext/blob/main/store/PRIVACY.md`
-- [ ] Support contact email in the dashboard and in PRIVACY.md — the placeholder is at
-      `store/PRIVACY.md` line 57. It becomes a publicly listed address
+- [x] Support contact email: `core@dhorse.fun` in the dashboard and in `store/PRIVACY.md`

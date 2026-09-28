@@ -65,8 +65,8 @@ beyond relaying it, and we do not use it to assess creditworthiness.
 
 ## Third parties
 
-The default endpoints above are operated by third parties and have their own policies. You can
-replace any of them in the extension's settings.
+The indexer on Mainnet and Testnet4 is operated by a third party and has its own policy. You can
+replace any of the endpoints in the extension's settings.
 
 ## Deleting your data
 
@@ -77,4 +77,4 @@ without a backup file, assets held in the wallet cannot be recovered.
 ## Contact
 
 Questions, or a privacy request: open an issue at
-https://github.com/RGB-Launchpad/wallet-ext/issues
+https://github.com/RGB-Launchpad/wallet-ext/issues or write to core@dhorse.fun
