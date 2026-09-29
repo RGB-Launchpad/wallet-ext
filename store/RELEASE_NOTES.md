@@ -26,3 +26,14 @@ install time. The README has the steps to rebuild that binary yourself.
 
 ⚠️ That engine describes itself as *"Beta Software — under active development and has not
 been audited."* Mainnet is offered; keep amounts small.
+
+---
+
+**What is new in 0.16.0.** The wallet opens on Mainnet by default. Settings apply on the
+spot — switching the network or an endpoint no longer locks the wallet. The indexer field
+offers presets with a live latency light, and refuses an address that does not answer like
+an Esplora API. The asset index takes part in saving like every other endpoint. The
+recovery phrase and the Bitcoin private key can be shown and copied from Export, behind the
+wallet password; the RGB side of Export carries the encrypted backup. The interface
+speaks English or Chinese. Creating or unlocking a wallet reports its stages instead of one
+waiting button. The settings icon is a gear again.

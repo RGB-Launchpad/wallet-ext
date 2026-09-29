@@ -1,11 +1,13 @@
 import { call } from "./lib/msg.js";
 import { amountOf, ago, sats, toRaw } from "./lib/fmt.js";
-import { NETWORKS } from "./config.js";
+import { NETWORKS, INDEXERS } from "./config.js";
 import { isChainMismatch, RESETTABLE } from "./lib/chain.js";
 import * as motion from "./lib/motion.js";
 import { assetList, describe } from "./lib/registry.js";
 import { renderQr } from "./lib/qr.js";
 import { enhanceAll } from "./lib/picker.js";
+import { t, setLang, applyI18n, localeOf } from "./lib/i18n.js";
+import { btcKey, outputKeyHex } from "./lib/keys.js";
 
 const $ = (id) => document.getElementById(id);
 // Ticker / name / assetId come from contract metadata and are issuer-controlled.
@@ -13,7 +15,9 @@ const $ = (id) => document.getElementById(id);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const show = (id, on = true) => { $(id).hidden = !on; };
-const setErr = (id, e) => { const n = $(id); if (!e) { n.hidden = true; return; } n.textContent = e; n.hidden = false; };
+// Errors pass through `t()` so our own messages translate; engine originals fall through
+// unchanged, which is what an unknown key already does.
+const setErr = (id, e) => { const n = $(id); if (!e) { n.hidden = true; return; } n.textContent = t(String(e)); n.hidden = false; };
 /** Head and tail of a long identifier; the full value stays one copy away. */
 const short = (s, head = 8, tail = 6) => { s = String(s || ""); return s.length > head + tail + 1 ? `${s.slice(0, head)}…${s.slice(-tail)}` : s; };
 
@@ -47,7 +51,7 @@ async function copy(text, btn) {
     const label = btn.querySelector("span");
     if (label) {
         label.dataset.text ??= label.textContent;
-        label.textContent = "Copied";
+        label.textContent = t("Copied");
     }
     btn.classList.add("done");
     motion.bump(btn);
@@ -97,9 +101,9 @@ function showOnly(which) {
     show("lock", which === "main");
     if (which === "welcome" || which === "locked") header("none");
     else if (which === "main") viewHeader();
-    else if (which === "settings-view") header("sub", "Settings", leaveSettings);
-    else if (which === "setup") header("sub", mode === "import" ? "Import wallet" : "Create wallet", () => showOnly("welcome"));
-    else if (which === "seed") header("sub", "Recovery phrase");   // no way back: the phrase is shown once
+    else if (which === "settings-view") header("sub", t("Settings"), leaveSettings);
+    else if (which === "setup") header("sub", mode === "import" ? t("Import wallet") : t("Create wallet"), () => showOnly("welcome"));
+    else if (which === "seed") header("sub", t("Recovery phrase"));   // no way back: the phrase is shown once
     if (which !== current) {
         current = which;
         motion.enter($(which));
@@ -155,12 +159,19 @@ async function banner(st) {
     const items = [];
 
     if (st.onlineErr) {
-        items.push({ text: `Indexer unreachable: ${st.onlineErr}`, action: null });
+        // The indexer rejected the address outright — a wrong endpoint, not a network blip.
+        const wrongApi = /not a valid esplora/i.test(st.onlineErr);
+        items.push({
+            text: wrongApi
+                ? t("The indexer address is not an Esplora API. Pick one from the list in Settings → Indexer.")
+                : t("Indexer unreachable: {e}", { e: st.onlineErr }),
+            action: { id: "bnSettings", label: t("Settings") },
+        });
     }
     if (st.proxyMissing) {
         items.push({
-            text: "No RGB proxy configured. Sending and receiving need one.",
-            action: { id: "bnSettings", label: "Settings" },
+            text: t("No RGB proxy configured. Sending and receiving need one."),
+            action: { id: "bnSettings", label: t("Settings") },
         });
     }
 
@@ -203,21 +214,23 @@ function syncSetupMode() {
     show("mnemonicBox", imp);
     show("setupSteps", !imp);
     $("setupLead").textContent = imp
-        ? "Enter your recovery phrase, then set a password for this device."
-        : "Step 1 of 2 · Set a password for this device.";
-    $("doCreate").textContent = imp ? "Import wallet" : "Create wallet";
+        ? t("Enter your recovery phrase, then set a password for this device.")
+        : t("Step 1 of 2 · Set a password for this device.");
+    $("doCreate").textContent = imp ? t("Import wallet") : t("Create wallet");
     setErr("setupErr", null);
 }
 
 $("doCreate").onclick = async () => {
     setErr("setupErr", null);
     const [p1, p2] = [$("pw1").value, $("pw2").value];
-    const refuse = (msg) => { setErr("setupErr", msg); motion.shake($("doCreate")); };
+    const refuse = (msg) => { setErr("setupErr", t(msg)); motion.shake($("doCreate")); };
     if (p1 !== p2) return refuse("Passwords do not match");
     if (p1.length < 8) return refuse("Password must be at least 8 characters");
     $("doCreate").disabled = true;
-    $("doCreate").textContent = "Working…";
+    $("doCreate").textContent = t("Working…");
+    bootStart("bootProg");
     const r = await call("create", { password: p1, mnemonic: mode === "import" ? $("mnemonicIn").value : "" });
+    bootEnd("bootProg");
     $("doCreate").disabled = false;
     syncSetupMode();
     if (!r.ok) return refuse(r.err);
@@ -244,9 +257,11 @@ $("seedDone").onclick = async () => {
 // ---------- unlock / lock ----------
 $("doUnlock").onclick = async () => {
     setErr("lockErr", null);
-    $("doUnlock").disabled = true; $("doUnlock").textContent = "Unlocking…";
+    $("doUnlock").disabled = true; $("doUnlock").textContent = t("Unlocking…");
+    bootStart("bootProgLocked");
     const r = await call("unlock", { password: $("pwUnlock").value });
-    $("doUnlock").disabled = false; $("doUnlock").textContent = "Unlock";
+    bootEnd("bootProgLocked");
+    $("doUnlock").disabled = false; $("doUnlock").textContent = t("Unlock");
     if (!r.ok) { setErr("lockErr", r.err); motion.shake($("pwUnlock")); return; }
     $("pwUnlock").value = "";
     show("lockMsg", false);
@@ -256,9 +271,44 @@ $("pwUnlock").onkeydown = (e) => { if (e.key === "Enter") $("doUnlock").click();
 $("lock").onclick = async () => { await call("lock"); await showLocked(); };
 
 // The engine can close while a tab is on screen; the view follows it back to the locked
-// screen instead of showing a stale unlocked one.
+// screen instead of showing a stale unlocked one. Boot stages light the progress rows.
+const BOOT_STEPS = ["phrase", "encrypt", "open", "online"];
+let bootTimer = null;
+
+function bootProgress(which, step) {
+    const box = $(which);
+    if (!box || box.hidden) return;
+    const rows = [...box.querySelectorAll(".bp-row")];
+    const at = rows.findIndex((r) => r.dataset.step === step);
+    rows.forEach((r, i) => {
+        r.classList.toggle("done", i < at);
+        r.classList.toggle("on", i === at);
+    });
+}
+function bootStart(which) {
+    const box = $(which);
+    box.hidden = false;
+    for (const r of box.querySelectorAll(".bp-row")) r.classList.remove("on", "done");
+    const secs = box.querySelector("#bpSecs, .bpSecs");
+    let n = 0;
+    clearInterval(bootTimer);
+    bootTimer = setInterval(() => { n += 1; if (secs) secs.textContent = String(n); }, 1000);
+}
+function bootEnd(which) {
+    clearInterval(bootTimer);
+    bootTimer = null;
+    const box = $(which);
+    if (box) box.hidden = true;
+}
+
 chrome.runtime.onMessage.addListener((msg) => {
-    if (msg?.to !== "views" || msg.ev !== "locked") return;
+    if (msg?.to !== "views") return;
+    if (msg.ev === "stage") {
+        bootProgress("bootProg", msg.step);
+        bootProgress("bootProgLocked", msg.step);
+        return;
+    }
+    if (msg.ev !== "locked") return;
     // A wipe closes the engine too, so the surviving vault decides which screen to show.
     call("hasVault").then((r) => (r.ok && r.data.hasVault ? showLocked() : showOnly("welcome")));
 });
@@ -266,12 +316,12 @@ chrome.runtime.onMessage.addListener((msg) => {
 // ---------- navigation ----------
 // Home, plus panels reached from it that return with Back.
 const VIEWS = ["home", "recv", "send", "hist", "backup"];
-const TITLES = { recv: "Receive", send: "Send", hist: "Activity", backup: "Backup" };
+const TITLES = { recv: "Receive", send: "Send", hist: "Activity", backup: "Export" };
 let view = "home";
 
 function viewHeader() {
     if (view === "home") header("main");
-    else header("sub", TITLES[view], () => goto("home"));
+    else header("sub", t(TITLES[view]), () => goto("home"));
 }
 
 async function goto(v, { tab } = {}) {
@@ -328,15 +378,15 @@ async function loadHome({ rise = false } = {}) {
         shownSats = s;
         const pending = BigInt(btcSpendable) - BigInt(s);
         if (pending > 0n) {
-            $("btcPend").textContent = `+${sats.toBtc(pending.toString())} BTC waiting to confirm`;
+            $("btcPend").textContent = t("+{n} BTC waiting to confirm", { n: sats.toBtc(pending.toString()) });
             show("btcPend");
         } else show("btcPend", false);
     }
 
-    if (!oc.ok) { box.innerHTML = `<div class="err fine pad">${esc(oc.err)}</div>`; return; }
+    if (!oc.ok) { box.innerHTML = `<div class="err fine pad">${esc(t(String(oc.err)))}</div>`; return; }
 
     const list = oc.data.assets || [];
-    $("assetCount").textContent = `Assets · ${list.length}`;
+    $("assetCount").textContent = t("Assets · {n}", { n: list.length });
 
     // Asset identity, if an index is configured. It never blocks the list: a slow or missing
     // index leaves every asset exactly as the wallet already knows it.
@@ -359,7 +409,7 @@ async function loadHome({ rise = false } = {}) {
             ${settled.unknown ? `<span class="fine">Precision unknown. The balance is the raw base-unit value.</span>` : ""}
             ${identityLines(id)}
         </div>`;
-    }).join("") || `<p class="fine pad">No assets yet. Use Receive to get some.</p>`;
+    }).join("") || `<p class="fine pad">${esc(t("No assets yet. Use Receive to get some."))}</p>`;
 
     for (const row of box.querySelectorAll(".asset")) {
         row.onclick = () => {
@@ -385,29 +435,30 @@ function identityLines(id) {
     const lines = [];
 
     if (id.sameTicker.length) {
-        lines.push(`<span class="warn fine">${id.sameTicker.length} other contract${id.sameTicker.length > 1 ? "s use" : " uses"}
-            the ticker ${esc(id.ticker || "")}. A ticker is not an identity: check the contract id.</span>`);
+        const key = id.sameTicker.length > 1
+            ? "{n} other contracts use the ticker {ticker}. A ticker is not an identity: check the contract id."
+            : "{n} other contract uses the ticker {ticker}. A ticker is not an identity: check the contract id.";
+        lines.push(`<span class="warn fine">${esc(t(key, { n: id.sameTicker.length, ticker: id.ticker || "" }))}</span>`);
     }
-    if (id.disputed) lines.push(`<span class="warn fine">A complaint about this asset was accepted and is unresolved.</span>`);
+    if (id.disputed) lines.push(`<span class="warn fine">${esc(t("A complaint about this asset was accepted and is unresolved."))}</span>`);
 
     if (!id.registered) {
-        lines.push(`<span class="fine">Not registered with the configured index. That is not a verdict: the asset
-            is identified by its contract id above.</span>`);
+        lines.push(`<span class="fine">${esc(t("Not registered with the configured index. That is not a verdict: the asset is identified by its contract id above."))}</span>`);
         return lines.join("");
     }
 
-    const issuer = id.issuerIdentified ? "reviewed by the index operator"
-        : id.issuerVerified ? "verified against a domain or account"
-        : id.issuerSigned ? "signed by a key, with no identity proof"
-        : "no issuer has claimed it";
-    lines.push(`<span class="fine">Issuer: ${issuer}.${id.listed ? " Listed by a publisher's ledger." : ""}</span>`);
+    const issuer = id.issuerIdentified ? t("Issuer: reviewed by the index operator.")
+        : id.issuerVerified ? t("Issuer: verified against a domain or account.")
+        : id.issuerSigned ? t("Issuer: signed by a key, with no identity proof.")
+        : t("Issuer: no issuer has claimed it.");
+    lines.push(`<span class="fine">${esc(issuer)}${id.listed ? esc(t(" Listed by a publisher's ledger.")) : ""}</span>`);
     return lines.join("");
 }
 
 /** Asset picker label: ticker, settled balance, and a marker when precision is unknown. */
 function optionLabel(x) {
     const b = amountOf(x.balance?.settled ?? "0", x.precision);
-    return `${x.ticker || "?"} · ${b.text}${b.unknown ? " (base units)" : ""}`;
+    return `${x.ticker || "?"} · ${b.text}${b.unknown ? ` (${t("base units")})` : ""}`;
 }
 
 /**
@@ -420,8 +471,8 @@ function deltaOf(settled, future, precision) {
     if (d === 0n) return "";
     const mag = amountOf((d < 0n ? -d : d).toString(), precision);
     return d < 0n
-        ? `<small>−${esc(mag.text)} leaving</small>`
-        : `<small class="in">+${esc(mag.text)} incoming</small>`;
+        ? `<small>${esc(t("−{n} leaving", { n: mag.text }))}</small>`
+        : `<small class="in">${esc(t("+{n} incoming", { n: mag.text }))}</small>`;
 }
 
 // ---------- sync ----------
@@ -429,7 +480,7 @@ let lastSyncAt = null;
 
 function syncLabel() {
     const a = lastSyncAt ? ago(Math.floor(lastSyncAt / 1000)) : "";
-    $("refreshMs").textContent = a ? `Synced ${a} ago` : "Sync";
+    $("refreshMs").textContent = a ? t("Synced {t} ago", { t: a }) : t("Sync");
 }
 setInterval(() => { if (!$("doRefresh").disabled) syncLabel(); }, 10_000);
 
@@ -446,7 +497,7 @@ function holdRefresh(ms) {
     btn.disabled = true;
     const tick = () => {
         if (left <= 0) { btn.disabled = false; syncLabel(); return; }
-        $("refreshMs").textContent = `Sync in ${left}s`;
+        $("refreshMs").textContent = t("Sync in {n}s", { n: left });
         left -= 1;
         setTimeout(tick, 1000);
     };
@@ -458,7 +509,7 @@ $("doRefresh").onclick = async (e) => {
     const btn = $("doRefresh");
     btn.disabled = true;
     setErr("homeErr", null);
-    $("refreshMs").textContent = "Verifying…";        // client-side validation grows with history
+    $("refreshMs").textContent = t("Verifying…");        // client-side validation grows with history
     const stop = motion.spin(btn.querySelector("svg"));
     const r = await call("refresh");
     stop();
@@ -472,7 +523,7 @@ $("doRefresh").onclick = async (e) => {
         return;
     }
     show("chainReset", false);
-    btn.title = `Last sync took ${r.data.ms} ms`;
+    btn.title = t("Last sync took {ms} ms", { ms: r.data.ms });
     lastSyncAt = Date.now();
     try { await chrome.storage.session.set({ lastSyncAt }); } catch { /* shown for this popup only */ }
     await loadHome();
@@ -495,7 +546,7 @@ $("doChainReset").onclick = async () => {
     setErr("homeErr", null);
     // The engine closed; unlocking boots it on an empty Regtest snapshot.
     await showLocked();
-    $("lockMsg").textContent = "Regtest data cleared. Unlock to sync with the current chain.";
+    $("lockMsg").textContent = t("Regtest data cleared. Unlock to sync with the current chain.");
     show("lockMsg");
 };
 
@@ -530,24 +581,24 @@ async function loadSlots() {
     const usable = n > 0 && settled > 0n;
 
     // "0 waiting" reads as though something were on its way; nothing is.
-    $("slots").textContent = n === null ? "?" : (n === 0 ? "0" : (usable ? `${n} ready` : `${n} waiting`));
+    $("slots").textContent = n === null ? "?" : (n === 0 ? "0" : (usable ? t("{n} ready", { n }) : t("{n} waiting", { n })));
     $("slots").style.color = usable ? "var(--color-up)" : "var(--color-gold)";
 
     // The button is never blocked on this: with no slot ready the invoice falls back to one
     // the sender pays for, and says so.
-    $("doInvoice").title = usable ? "" : "No slot ready — the invoice will use the sender's output instead.";
+    $("doInvoice").title = usable ? "" : t("No slot ready — the invoice will use the sender's output instead.");
 }
 
 $("doPrepare").onclick = async () => {
     setErr("recvErr", null); show("recvMsg", false);
-    const b = $("doPrepare"); b.disabled = true; b.textContent = "Adding…";
+    const b = $("doPrepare"); b.disabled = true; b.textContent = t("Adding…");
     const r = await call("prepare");
-    b.disabled = false; b.textContent = "Add slots";
+    b.disabled = false; b.textContent = t("Add slots");
     if (!r.ok) return setErr("recvErr", r.err);
     await loadSlots();
     motion.bump($("slots"));
     if (r.data.created) {
-        $("recvMsg").textContent = `Created ${r.data.created} slots. Usable after 1 confirmation.`;
+        $("recvMsg").textContent = t("Created {n} slots. Usable after 1 confirmation.", { n: r.data.created });
         show("recvMsg");
     }
     await refreshBanner();
@@ -557,7 +608,7 @@ $("doPrepare").onclick = async () => {
 async function backupEverDone() {
     return !!(await chrome.storage.local.get("backupDoneAt")).backupDoneAt;
 }
-$("goBackup").onclick = () => goto("backup");
+$("goBackup").onclick = () => gotoExport("rgb");
 $("anyway").onclick = async () => { motion.reveal($("noBackupWarn"), false); await makeInvoice(); };
 
 $("doInvoice").onclick = async () => {
@@ -596,11 +647,12 @@ async function makeInvoice() {
     // Which kind this is. The two look alike, and only the recipient id says so: `utxob` is
     // a blinded UTXO of this wallet, `wvout` an output of the sender's transaction.
     const kind = witness
-        ? "No slot used · the sender creates the output and can see which one it is. Invoices stay this kind until this one is used or expires."
-        : "Uses one slot · the sender sees nothing but a blinded identifier";
+        ? t("No slot used · the sender creates the output and can see which one it is. Invoices stay this kind until this one is used or expires.")
+        : t("Uses one slot · the sender sees nothing but a blinded identifier");
     $("invoiceExp").textContent = exp
-        ? `${kind} · expires ${new Date(Number(exp) * 1000).toLocaleString(undefined,
-            { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+        ? `${kind} ${t("· expires {t}", {
+            t: new Date(Number(exp) * 1000).toLocaleString(localeOf(),
+                { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}`
         : kind;
     show("invoiceEmpty", false);
     show("invoiceBox");
@@ -630,13 +682,13 @@ async function loadBtc() {
     const pending = BigInt(vanilla.spendable) - BigInt(vanilla.settled);
     // `future` for the colored side: it is a total, not something to spend, so pending
     // slots belong in it. Without this row, creating slots looks like losing Bitcoin.
-    $("btcBal").innerHTML = `<div class="r"><span>Available</span><b class="num">${sats.toBtc(vanilla.spendable)} BTC</b></div>
-        <div class="r sub"><span>Confirmed</span><span class="num">${sats.toBtc(vanilla.settled)} BTC</span></div>
-        ${pending > 0n ? `<div class="r sub"><span>Waiting to confirm</span>
+    $("btcBal").innerHTML = `<div class="r"><span>${esc(t("Available"))}</span><b class="num">${sats.toBtc(vanilla.spendable)} BTC</b></div>
+        <div class="r sub"><span>${esc(t("Confirmed"))}</span><span class="num">${sats.toBtc(vanilla.settled)} BTC</span></div>
+        ${pending > 0n ? `<div class="r sub"><span>${esc(t("Waiting to confirm"))}</span>
             <span class="num">${esc(sats.toBtc(pending.toString()))} BTC</span></div>` : ""}
-        <div class="r"><span>In RGB UTXOs</span><span class="num">${sats.toBtc(colored.future)} BTC</span></div>
-        <p class="fine">RGB UTXOs carry the assets. Their Bitcoin is not spendable as plain BTC.
-        ${pending > 0n ? "Creating slots waits for every input to confirm." : ""}</p>`;
+        <div class="r"><span>${esc(t("In RGB UTXOs"))}</span><span class="num">${sats.toBtc(colored.future)} BTC</span></div>
+        <p class="fine">${esc(t("RGB UTXOs carry the assets. Their Bitcoin is not spendable as plain BTC."))}
+        ${pending > 0n ? esc(t("Creating slots waits for every input to confirm.")) : ""}</p>`;
 }
 
 // ---------- send ----------
@@ -659,14 +711,14 @@ async function loadSendForm() {
     assetsCache = a.ok ? a.data.assets : [];
     $("sAsset").innerHTML = assetsCache.map((x) =>
         `<option value="${esc(x.assetId)}">${esc(optionLabel(x))}</option>`).join("")
-        || `<option value="">No assets</option>`;
+        || `<option value="">${esc(t("No assets"))}</option>`;
     syncUnit();
     syncBtcUnit();
     const f = await call("feeSuggestion");
     // Says the number is deliberately high, so it does not read as a bad estimate.
     const hint = f.ok
-        ? `${f.data.feeRate} sat/vB, set above what the network is clearing. Adjust if you want.`
-        : "Could not reach the network for an estimate — enter a rate manually.";
+        ? t("{rate} sat/vB, set above what the network is clearing. Adjust if you want.", { rate: f.data.feeRate })
+        : t("Could not reach the network for an estimate — enter a rate manually.");
     $("sFeeHint").textContent = hint;
     $("bFeeHint").textContent = hint;
     if (f.ok) { $("sFee").value = f.data.feeRate; $("bFee").value = f.data.feeRate; }
@@ -690,13 +742,13 @@ function rgbSendLabel() {
     const a = currentAsset();
     const v = $("sAmount").value.trim();
     $("doSendRgb").textContent = a && /^\d*\.?\d+$/.test(v) && Number(v) > 0
-        ? `Send ${v} ${a.ticker || ""}`.trim() : "Send";
+        ? t("Send {v} {ticker}", { v, ticker: a.ticker || "" }).trim() : t("Send");
 }
 
 function btcSendLabel() {
     const v = $("bAmount").value.trim();
     $("doSendBtc").textContent = /^\d*\.?\d+$/.test(v) && Number(v) > 0
-        ? `Send ${v} ${btcUnit === "btc" ? "BTC" : "sats"}` : "Send";
+        ? t("Send {v} {ticker}", { v, ticker: btcUnit === "btc" ? "BTC" : "sats" }) : t("Send");
 }
 
 function syncUnit() {
@@ -704,12 +756,12 @@ function syncUnit() {
     // Without precision the amount has to be entered in base units.
     $("sUnit").textContent = a
         ? (a.precision === null || a.precision === undefined
-            ? "precision unknown, enter base units"
-            : `up to ${a.precision} decimals`)
+            ? t("precision unknown, enter base units")
+            : t("up to {n} decimals", { n: a.precision }))
         : "";
     const max = $("sMax");
     max.hidden = !a;
-    if (a) max.textContent = `Max ${amountOf(sendableRaw(a).toString(), a.precision).text}`;
+    if (a) max.textContent = t("Max {v}", { v: amountOf(sendableRaw(a).toString(), a.precision).text });
     rgbSendLabel();
 }
 
@@ -733,7 +785,8 @@ function syncBtcUnit() {
     $("bAmount").placeholder = isBtc ? "0.001" : "100000";
     $("bAvail").textContent = btcSpendable === null
         ? ""
-        : `Spendable ${isBtc ? `${sats.toBtc(btcSpendable)} BTC` : `${btcSpendable} sats`}`;
+        : (isBtc ? t("Spendable {v} BTC", { v: sats.toBtc(btcSpendable) })
+                 : t("Spendable {v} sats", { v: btcSpendable }));
     syncBtcAmountHint();
 }
 
@@ -746,17 +799,16 @@ function syncBtcAmountHint() {
     try {
         const amt = btcUnit === "btc" ? btcAmountToSats(raw) : raw;
         node.textContent = btcUnit === "btc"
-            ? `= ${amt} sats`
-            : `= ${satsAmountToBtc(amt)} BTC`;
+            ? t("= {v} sats", { v: amt })
+            : t("= {v} BTC", { v: satsAmountToBtc(amt) });
         // Spending unconfirmed coins is allowed, but the send only lives as long as the
         // unconfirmed parent does. Say so; do not block.
         if (btcSettled !== null && BigInt(amt) > BigInt(btcSettled)) {
-            $("bPendHint").textContent = "More than the confirmed balance — the rest is still " +
-                "waiting to confirm. If that transaction never confirms, this send fails with it.";
+            $("bPendHint").textContent = t("More than the confirmed balance — the rest is still waiting to confirm. If that transaction never confirms, this send fails with it.");
             show("bPendHint");
         } else show("bPendHint", false);
     } catch (e) {
-        node.textContent = e.message || String(e);
+        node.textContent = t(String(e.message || e));
         show("bPendHint", false);
     }
 }
@@ -767,7 +819,7 @@ function syncBtcAmountHint() {
  */
 function btcAmountToSats(v) {
     const out = sats.fromBtc(v);
-    if (!/^\d+$/.test(out)) throw new Error("Amount must be positive");
+    if (!/^\d+$/.test(out)) throw new Error(t("Amount must be positive"));
     return out;
 }
 
@@ -777,7 +829,7 @@ function btcAmountToSats(v) {
  * "0.000001.5". User input is checked before it reaches this.
  */
 function satsAmountToBtc(v) {
-    if (!/^\d+$/.test(v)) throw new Error("Enter a whole number of sats");
+    if (!/^\d+$/.test(v)) throw new Error(t("Enter a whole number of sats"));
     return sats.toBtc(v);
 }
 
@@ -824,18 +876,18 @@ async function decodeInvoice() {
         rgbSendLabel();
     }
     const head = want
-        ? `${esc(want.text)}${want.unknown ? " (base units)" : ""} ${esc(asset?.ticker || "")}`
-        : "Any amount";
+        ? `${esc(want.text)}${want.unknown ? ` (${esc(t("base units"))})` : ""} ${esc(asset?.ticker || "")}`
+        : esc(t("Any amount"));
     const rows = [
-        ["Asset", d.assetId ? `<code title="${esc(d.assetId)}">${esc(short(d.assetId, 12, 6))}</code>` : "Any asset"],
-        ["Network", esc(d.network || "?")],
+        [t("Asset"), d.assetId ? `<code title="${esc(d.assetId)}">${esc(short(d.assetId, 12, 6))}</code>` : esc(t("Any asset"))],
+        [t("Network"), esc(d.network || "?")],
     ];
-    if (d.expirationTimestamp) rows.push(["Expires", esc(new Date(Number(d.expirationTimestamp) * 1000).toLocaleString())]);
-    if (d.transportEndpoints?.length) rows.push(["Consignment to", `<code>${esc(d.transportEndpoints[0])}</code>`]);
+    if (d.expirationTimestamp) rows.push([t("Expires"), esc(new Date(Number(d.expirationTimestamp) * 1000).toLocaleString(localeOf()))]);
+    if (d.transportEndpoints?.length) rows.push([t("Consignment to"), `<code>${esc(d.transportEndpoints[0])}</code>`]);
     $("decoded").innerHTML = `<div class="row">${asset ? avatar(asset, "sm") : `<span class="av sm" style="background:var(--color-card-soft);color:var(--color-ink-2)">?</span>`}
             <span class="grow" style="font-weight:600;font-size:14px">${head}</span></div>`
-        + rows.map(([k, v]) => `<div class="r"><span>${k}</span><span>${v}</span></div>`).join("")
-        + r.data.warnings.map((w) => `<div class="err">${esc(w)}</div>`).join("");
+        + rows.map(([k, v]) => `<div class="r"><span>${esc(k)}</span><span>${v}</span></div>`).join("")
+        + r.data.warnings.map((w) => `<div class="err">${esc(t(String(w)))}</div>`).join("");
     const was = !$("decoded").hidden;
     show("decoded");
     if (!was) motion.enter($("decoded"));
@@ -873,14 +925,14 @@ $("doSendRgb").onclick = async () => {
         amountRaw = (a.precision === null || a.precision === undefined)
             ? BigInt($("sAmount").value.trim()).toString()
             : toRaw($("sAmount").value.trim(), a.precision);
-    } catch (e) { return setErr("sendErr", `Invalid amount: ${e.message}`); }
+    } catch (e) { return setErr("sendErr", t("Invalid amount: {e}", { e: e.message })); }
 
     const have = sendableRaw(a);
     if (BigInt(amountRaw) > have) {
-        return setErr("sendErr", `More than can be sent now. Max ${amountOf(have.toString(), a.precision).text}`);
+        return setErr("sendErr", t("More than can be sent now. Max {v}", { v: amountOf(have.toString(), a.precision).text }));
     }
 
-    const btn = $("doSendRgb"); btn.disabled = true; btn.textContent = "Sending…";
+    const btn = $("doSendRgb"); btn.disabled = true; btn.textContent = t("Sending…");
     const r = await call("sendRgb", {
         invoice: $("sInvoice").value, assetId: a.assetId, amountRaw,
         feeRate: Number($("sFee").value) || undefined,
@@ -889,10 +941,8 @@ $("doSendRgb").onclick = async () => {
     if (!r.ok) return setErr("sendErr", r.err);
     // Not broadcast. RGB posts the consignment and waits: the recipient validates it and
     // acknowledges, and only then does this wallet put the transaction on chain.
-    sent(`<span>Sent · <code>${esc(r.data.txid)}</code></span>
-        <span class="fine">Nothing is on chain until the recipient accepts it. The wallet
-        finishes that on its own — leave it unlocked until it does. Locking or closing the
-        browser first means sending again; the asset stays here either way.</span>`);
+    sent(`<span>${esc(t("Sent"))} · <code>${esc(r.data.txid)}</code></span>
+        <span class="fine">${esc(t("Nothing is on chain until the recipient accepts it. The wallet finishes that on its own — leave it unlocked until it does. Locking or closing the browser first means sending again; the asset stays here either way."))}</span>`);
     $("sAmount").value = ""; $("sInvoice").value = ""; show("decoded", false);
     rgbSendLabel();
     await loadHome();
@@ -902,25 +952,25 @@ $("doSendRgb").onclick = async () => {
 $("doSendBtc").onclick = async () => {
     setErr("sendErr", null); show("sendOut", false);
     const raw = $("bAmount").value.trim();
-    if (!raw) return setErr("sendErr", "Enter an amount");
+    if (!raw) return setErr("sendErr", t("Enter an amount"));
     // Convert here, at the single boundary. What crosses to the engine is always sats.
     let amt;
     try {
         amt = btcUnit === "btc" ? btcAmountToSats(raw) : raw;
-        if (!/^\d+$/.test(amt)) throw new Error("Amount must be a whole number of sats");
-        if (amt === "0") throw new Error("Amount must be greater than zero");
+        if (!/^\d+$/.test(amt)) throw new Error(t("Amount must be a whole number of sats"));
+        if (amt === "0") throw new Error(t("Amount must be greater than zero"));
         // The fee comes out of the same balance; the engine decides whether amount plus fee fits.
         if (btcSpendable !== null && BigInt(amt) > BigInt(btcSpendable)) {
-            throw new Error(`Insufficient balance — spendable is ${sats.toBtc(btcSpendable)} BTC`);  // engine value, already an integer
+            throw new Error(t("Insufficient balance — spendable is {v} BTC", { v: sats.toBtc(btcSpendable) }));  // engine value, already an integer
         }
     } catch (e) { return setErr("sendErr", e.message || String(e)); }
-    const btn = $("doSendBtc"); btn.disabled = true; btn.textContent = "Sending…";
+    const btn = $("doSendBtc"); btn.disabled = true; btn.textContent = t("Sending…");
     const r = await call("sendBtc", {
         address: $("bAddr").value, amountSat: amt, feeRate: Number($("bFee").value) || undefined,
     });
     btn.disabled = false; btcSendLabel();
     if (!r.ok) return setErr("sendErr", r.err);
-    sent(`<span>Broadcast <code>${esc(r.data.txid)}</code></span>`);
+    sent(`<span>${esc(t("Broadcast"))} <code>${esc(r.data.txid)}</code></span>`);
     $("bAmount").value = ""; syncBtcAmountHint();
     await loadBtc();
     await refreshBanner();
@@ -941,11 +991,11 @@ const finished = (t) => t.status === "Settled" || t.status === "Failed";
  * How far along a pending transfer is. `null` means the indexer could not be asked, which
  * is different from zero and so says nothing rather than "no confirmations".
  */
-function progressText(t, target) {
-    if (t.confirmations == null) return "";
-    if (t.confirmations === 0) return "in the mempool";
-    if (t.confirmations < target) return `${t.confirmations} of ${target}`;
-    return `${t.confirmations} confirmations`;
+function progressText(tr, target) {
+    if (tr.confirmations == null) return "";
+    if (tr.confirmations === 0) return t("in the mempool");
+    if (tr.confirmations < target) return t("{n} of {t}", { n: tr.confirmations, t: target });
+    return t("{n} confirmations", { n: tr.confirmations });
 }
 
 let hist = { list: [], target: 1, err: null };
@@ -969,33 +1019,33 @@ async function loadHistory() {
 
 function renderHistory() {
     const box = $("histList");
-    if (hist.err) { box.innerHTML = `<div class="empty-line err">${esc(hist.err)}</div>`; return; }
-    const list = hist.list.filter((t) => histFilter === "all" || (histFilter === "done") === finished(t));
+    if (hist.err) { box.innerHTML = `<div class="empty-line err">${esc(t(String(hist.err)))}</div>`; return; }
+    const list = hist.list.filter((tr) => histFilter === "all" || (histFilter === "done") === finished(tr));
     if (!list.length) {
-        box.innerHTML = `<div class="empty-line">${hist.list.length ? "Nothing here." : "Nothing yet."}</div>`;
+        box.innerHTML = `<div class="empty-line">${esc(hist.list.length ? t("Nothing here.") : t("Nothing yet."))}</div>`;
         return;
     }
-    box.innerHTML = list.map((t) => {
-        const asset = assetsCache.find((x) => x.assetId === t.assetId);
+    box.innerHTML = list.map((tr) => {
+        const asset = assetsCache.find((x) => x.assetId === tr.assetId);
         // An asset no longer held is not in the cache, so precision is unknown more often
         // here. Unknown precision is marked, as on the balance rows.
-        const a = t.amount != null ? amountOf(t.amount, asset?.precision) : null;
-        const recv = String(t.kind || "").startsWith("Receive");
-        const issued = t.kind === "Issuance";
-        const verb = issued ? "Issued" : recv ? "Received" : "Sent";
-        const amt = a ? `${recv || issued ? "+" : "−"}${a.text}${a.unknown ? " (base units)" : ""}` : "";
-        const p = finished(t) ? "" : progressText(t, hist.target);
-        const age = ago(t.updated_at ?? t.created_at);
-        const stuck = !finished(t) && t.batchTransferIdx != null;
+        const a = tr.amount != null ? amountOf(tr.amount, asset?.precision) : null;
+        const recv = String(tr.kind || "").startsWith("Receive");
+        const issued = tr.kind === "Issuance";
+        const verb = issued ? t("Issued") : recv ? t("Received") : t("Sent");
+        const amt = a ? `${recv || issued ? "+" : "−"}${a.text}${a.unknown ? ` (${t("base units")})` : ""}` : "";
+        const p = finished(tr) ? "" : progressText(tr, hist.target);
+        const age = ago(tr.updated_at ?? tr.created_at);
+        const stuck = !finished(tr) && tr.batchTransferIdx != null;
         return `<div class="tx">
             <span class="ic">${issued ? ICON.issue : recv ? ICON.in : ICON.out}</span>
             <span class="mid">
-                <span>${verb} <span class="num">${esc(amt)} ${esc(asset?.ticker || "")}</span></span>
-                <span class="st ${STATUS_CLASS[t.status] || ""}"><i></i>${esc(STATUS_TEXT[t.status] || t.status || "")}${p ? ` · ${esc(p)}` : ""}</span>
-                ${t.txid ? `<span class="id" hidden>${esc(t.txid)}</span>` : ""}
+                <span>${esc(verb)} <span class="num">${esc(amt)} ${esc(asset?.ticker || "")}</span></span>
+                <span class="st ${STATUS_CLASS[tr.status] || ""}"><i></i>${esc(STATUS_TEXT[tr.status] ? t(STATUS_TEXT[tr.status]) : (tr.status || ""))}${p ? ` · ${esc(p)}` : ""}</span>
+                ${tr.txid ? `<span class="id" hidden>${esc(tr.txid)}</span>` : ""}
             </span>
-            <span class="end">${age ? `${esc(age)} ago` : ""}
-                ${stuck ? `<button data-fail="${esc(t.batchTransferIdx)}">Cancel</button>` : ""}</span>
+            <span class="end">${age ? esc(t("{t} ago", { t: age })) : ""}
+                ${stuck ? `<button data-fail="${esc(tr.batchTransferIdx)}">${esc(t("Cancel"))}</button>` : ""}</span>
         </div>`;
     }).join("");
     // The txid opens under the row, so the list stays short.
@@ -1008,7 +1058,7 @@ function renderHistory() {
             e.stopPropagation();
             b.disabled = true;
             const r = await call("failTransfer", { batchTransferIdx: b.dataset.fail });
-            if (!r.ok) { b.disabled = false; b.textContent = r.err; return; }
+            if (!r.ok) { b.disabled = false; b.textContent = t(String(r.err)); return; }
             await loadHistory();
             await loadHome();
         };
@@ -1022,19 +1072,19 @@ $("doHist").onclick = async () => {
     stop();
 };
 $("doCleanup").onclick = async () => {
-    const b = $("doCleanup"); b.disabled = true; b.textContent = "Clearing…";
+    const b = $("doCleanup"); b.disabled = true; b.textContent = t("Clearing…");
     const r = await call("cleanup");
-    b.disabled = false; b.textContent = "Clear";
-    $("cleanMsg").textContent = r.ok ? `Cleared. ${r.data.slots} free slots.` : r.err;
+    b.disabled = false; b.textContent = t("Clear");
+    $("cleanMsg").textContent = r.ok ? t("Cleared. {n} free slots.", { n: r.data.slots }) : t(String(r.err));
     await loadHistory();
 };
 
 // ---------- backup ----------
 $("doBackup").onclick = async () => {
     const out = $("bkOut");
-    out.textContent = "Packing…";
+    out.textContent = t("Packing…");
     const r = await call("backup", { password: $("bkPw").value });
-    if (!r.ok) { out.innerHTML = `<span class="err">${esc(r.err)}</span>`; motion.shake($("bkPw")); return; }
+    if (!r.ok) { out.innerHTML = `<span class="err">${esc(t(String(r.err)))}</span>`; motion.shake($("bkPw")); return; }
     const blob = new Blob([new Uint8Array(r.data.bytes)], { type: "application/octet-stream" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -1047,19 +1097,19 @@ $("doBackup").onclick = async () => {
     // rgb-lib marks the wallet as backed up during backup(), so re-reading status clears
     // the warning.
     await refreshBanner();
-    out.textContent = "Exported. The backup password is separate from the wallet password.";
+    out.textContent = t("Exported. The backup password is separate from the wallet password.");
 };
 
 $("doRestore").onclick = async () => {
     const out = $("rsOut");
     const f = $("rsFile").files?.[0];
-    if (!f) { out.innerHTML = `<span class="err">Select a backup file</span>`; return; }
-    out.textContent = "Restoring…";
+    if (!f) { out.innerHTML = `<span class="err">${esc(t("Select a backup file"))}</span>`; return; }
+    out.textContent = t("Restoring…");
     const bytes = Array.from(new Uint8Array(await f.arrayBuffer()));
     const r = await call("restoreBackup", { bytes, password: $("rsPw").value });
     $("rsPw").value = "";
-    if (!r.ok) { out.innerHTML = `<span class="err">${esc(r.err)}</span>`; return; }
-    out.textContent = "Restored.";
+    if (!r.ok) { out.innerHTML = `<span class="err">${esc(t(String(r.err)))}</span>`; return; }
+    out.textContent = t("Restored.");
     await loadHome();
     await refreshBanner();
 };
@@ -1090,13 +1140,13 @@ for (const b of document.querySelectorAll("[data-more]")) {
 async function loadSites() {
     const r = await call("sites");
     const box = $("sitesList");
-    if (!r.ok) { box.innerHTML = `<p class="err">${esc(r.err)}</p>`; return; }
+    if (!r.ok) { box.innerHTML = `<p class="err">${esc(t(String(r.err)))}</p>`; return; }
     const entries = Object.entries(r.data.sites || {});
     $("sitesCount").textContent = String(entries.length);
-    if (!entries.length) { box.innerHTML = `<p class="fine">No sites connected.</p>`; return; }
+    if (!entries.length) { box.innerHTML = `<p class="fine">${esc(t("No sites connected."))}</p>`; return; }
     box.innerHTML = entries.map(([origin, info]) => `<div class="site">
-        <span class="grow">${esc(origin)}<span>${esc(new Date(info.grantedAt).toLocaleString())}</span></span>
-        <button class="secondary sm" data-revoke="${esc(origin)}">Revoke</button></div>`).join("");
+        <span class="grow">${esc(origin)}<span>${esc(new Date(info.grantedAt).toLocaleString(localeOf()))}</span></span>
+        <button class="secondary sm" data-revoke="${esc(origin)}">${esc(t("Revoke"))}</button></div>`).join("");
     for (const b of box.querySelectorAll("[data-revoke]")) {
         b.onclick = async () => { await call("revokeSite", { origin: b.dataset.revoke }); await loadSites(); };
     }
@@ -1108,16 +1158,21 @@ async function loadBackupRow() {
     show("stBackup", unlocked);
     if (!unlocked) return;
     const needed = !(await backupEverDone()) || st.data.backupNeeded;
-    $("stBackupVal").textContent = needed ? "Needed" : "Up to date";
+    $("stBackupVal").textContent = needed ? t("Needed") : t("Up to date");
     $("stBackupVal").style.color = needed ? "var(--color-gold)" : "";
 }
-$("stBackup").onclick = () => { leaveSettings(); goto("backup"); };
+$("stBackup").onclick = () => { leaveSettings(); gotoExport("rgb"); };
 
 // Endpoints are per network, so the form shows the selected network's values.
 let settingsSnapshot = null;
 let formBase = "";
 
-const formValues = () => JSON.stringify([$("stNetwork").value, $("stEsplora").value.trim(), $("stProxy").value.trim()]);
+// All three endpoints take part in dirty detection: an edit to any of them has to raise
+// the Save bar, or the edit sits there looking saved.
+const formValues = () => JSON.stringify([
+    $("stNetwork").value, $("stEsplora").value.trim(),
+    $("stRegistry").value.trim(), $("stProxy").value.trim(),
+]);
 
 /** Host of an endpoint, for the row summary. */
 function hostOf(u) {
@@ -1128,6 +1183,7 @@ function hostOf(u) {
 /** The Save bar appears only when something differs from what is stored. */
 function syncDirty() {
     $("stEsploraVal").textContent = hostOf($("stEsplora").value);
+    $("stRegistryVal").textContent = hostOf($("stRegistry").value);
     $("stProxyVal").textContent = hostOf($("stProxy").value);
     const dirty = formValues() !== formBase;
     if (dirty && $("stFoot").hidden) { show("stFoot"); motion.enter($("stFoot")); }
@@ -1142,20 +1198,149 @@ function fillEndpoints(network) {
     $("stRegistry").value = saved.registryUrl ?? def.registryUrl ?? "";
 }
 
+// ---------- indexer presets with a latency lamp ----------
+// The lamp measures the preset the wallet offers, not just some address: the request is
+// `/blocks/tip/height`, which both times the round trip and proves the endpoint answers
+// like an Esplora API.
+/**
+ * What the endpoint is, and how fast. `answered` separates "served something that is not
+ * an Esplora API" from "nothing came back": only the first proves the address is wrong,
+ * while the second may just be a sandbox that is not up yet.
+ */
+async function probe(url) {
+    const base = String(url || "").trim().replace(/\/+$/, "");
+    if (!base) return { ms: null, esplora: false, answered: false };
+    const t0 = performance.now();
+    try {
+        const r = await fetch(`${base}/blocks/tip/height`, { cache: "no-store", signal: AbortSignal.timeout(5000) });
+        const body = (await r.text()).trim();
+        return {
+            ms: Math.round(performance.now() - t0),
+            esplora: r.ok && /^\d+$/.test(body),
+            answered: true,
+        };
+    } catch {
+        return { ms: null, esplora: false, answered: false };
+    }
+}
+
+const lampClass = (res) => !res.esplora ? "bad" : res.ms < 1000 ? "ok" : res.ms < 3000 ? "slow" : "bad";
+const lampText = (res) => (res.esplora ? t("{ms} ms", { ms: res.ms }) : t("unreachable"));
+
+async function renderPresets() {
+    const net = $("stNetwork").value;
+    const list = INDEXERS[net] || [];
+    const box = $("esPresets");
+    if (!list.length) { box.innerHTML = ""; return; }
+    box.innerHTML = `<div class="eyebrow">${esc(t("Preset indexers"))}</div>` + list.map((p) =>
+        `<div class="preset" data-url="${esc(p.url)}"><span class="lamp"></span>
+            <span class="nm">${esc(p.label)}</span><span class="ms">…</span></div>`).join("");
+    for (const row of box.querySelectorAll(".preset")) {
+        row.onclick = () => {
+            $("stEsplora").value = row.dataset.url;
+            syncDirty();
+            for (const r of box.querySelectorAll(".preset")) r.classList.toggle("sel", r === row);
+        };
+        // Selected-by-value, so a preset already in the field reads as chosen.
+        row.classList.toggle("sel", row.dataset.url === $("stEsplora").value.trim());
+    }
+    await testPresets();
+}
+
+async function testPresets() {
+    const rows = [...$("esPresets").querySelectorAll(".preset")];
+    await Promise.all(rows.map(async (row) => {
+        const res = await probe(row.dataset.url);
+        const lamp = row.querySelector(".lamp");
+        lamp.className = `lamp ${lampClass(res)}`;
+        row.querySelector(".ms").textContent = lampText(res);
+    }));
+}
+$("esRetest").onclick = testPresets;
+
 async function loadSettingsForm() {
     const r = await call("settings");
     if (!r.ok) return;
     const s = settingsSnapshot = r.data;
     $("stNetwork").innerHTML = Object.entries(NETWORKS)
         .map(([k, v]) => `<option value="${esc(k)}" ${k === s.network ? "selected" : ""}>${esc(v.label)}</option>`).join("");
+    $("stLang").value = s.lang || "en";
     fillEndpoints(s.network);
     formBase = formValues();
     syncDirty();
+    await renderPresets();
 }
 
-$("stNetwork").onchange = () => { fillEndpoints($("stNetwork").value); syncDirty(); };
+$("stNetwork").onchange = async () => {
+    fillEndpoints($("stNetwork").value);
+    syncDirty();
+    await renderPresets();
+};
 $("stEsplora").oninput = syncDirty;
+$("stRegistry").oninput = syncDirty;
 $("stProxy").oninput = syncDirty;
+
+// The language takes effect on the spot — the popup re-renders itself in the new tongue.
+$("stLang").onchange = async () => {
+    await call("saveSettings", { settings: { lang: $("stLang").value } });
+    setLang($("stLang").value);
+    applyI18n();
+    $("stMsg").textContent = t("Saved");
+};
+
+// ---------- export: bitcoin keys ----------
+// Both secrets sit behind the wallet password, which is what the vault itself is sealed
+// with. The private key is derived here from the phrase and then proved against the
+// wallet's own address before it is shown: a key that does not match would be worse than
+// no key at all. The RGB tab of this view carries the encrypted backup instead.
+function exportErr(e) { setErr("expErr", e); }
+
+function setExportTab(tab) {
+    for (const x of document.querySelectorAll("[data-exp]")) x.classList.toggle("on", x.dataset.exp === tab);
+    show("exp-btc", tab === "btc");
+    show("exp-rgb", tab === "rgb");
+}
+for (const b of document.querySelectorAll("[data-exp]")) {
+    b.onclick = () => setExportTab(b.dataset.exp);
+}
+
+/** Opens the export view on the tab the caller needs: keys, or the RGB backup. */
+async function gotoExport(tab) {
+    await goto("backup");
+    setExportTab(tab);
+}
+
+$("doReveal").onclick = async () => {
+    exportErr(null);
+    const r = await call("revealPhrase", { password: $("rpPw").value });
+    $("rpPw").value = "";
+    if (!r.ok) { exportErr(r.err); motion.shake($("doReveal")); return; }
+    const words = String(r.data.mnemonic || "").trim().split(/\s+/);
+    $("rpWords").innerHTML = words.map((w, i) => `<span><b>${i + 1}</b>${esc(w)}</span>`).join("");
+    show("rpOut");
+    motion.pop($("rpWords").children);
+};
+$("rpCopy").onclick = (e) => copy($("rpWords").textContent.replace(/\s+/g, " ").trim(), e.currentTarget);
+
+$("doShowKey").onclick = async () => {
+    exportErr(null);
+    const r = await call("revealPhrase", { password: $("kpPw").value });
+    $("kpPw").value = "";
+    if (!r.ok) { exportErr(r.err); motion.shake($("doShowKey")); return; }
+    const id = await call("identity");
+    if (!id.ok) { exportErr(id.err); return; }
+    const key = await btcKey(String(r.data.mnemonic || "").trim(), id.data.network);
+    // The proof: the key's tweaked output key must be the one the address commits to.
+    if ((await outputKeyHex(key.priv)).toLowerCase() !== String(id.data.publicKey).toLowerCase()) {
+        exportErr(t("This key does not match the wallet address."));
+        return;
+    }
+    $("kpWif").textContent = key.wif;
+    $("kpMeta").textContent = `${key.pathText} · ${id.data.address}`;
+    show("kpOut");
+    motion.pop($("kpOut").children);
+};
+$("kpCopy").onclick = (e) => copy($("kpWif").textContent, e.currentTarget);
 
 // The manifest declares only the default endpoints; anything else is granted at runtime.
 // `rpc://` and `rpcs://` are the RGB proxy schemes and map to http and https.
@@ -1180,28 +1365,42 @@ $("doSaveSettings").onclick = async () => {
     const granted = await ensureHostAccess([
         $("stEsplora").value, $("stProxy").value,
     ]);
-    if (!granted) { $("stMsg").textContent = "Access to those endpoints was not granted"; return; }
+    if (!granted) { $("stMsg").textContent = t("Access to those endpoints was not granted"); return; }
+
+    // A custom indexer is refused here when it answers but not like an Esplora API: the
+    // save would otherwise land and every sync would fail against it. Silence is not that
+    // proof — a sandbox that is not up yet still gets saved. Probed after the host grant
+    // above, so the request can actually go out.
+    const esplora = $("stEsplora").value.trim();
+    if (esplora) {
+        const res = await probe(esplora);
+        if (res.answered && !res.esplora) {
+            $("stMsg").textContent = t("This endpoint did not answer like an Esplora API.");
+            return;
+        }
+    }
+
     const r = await call("saveSettings", {
         settings: {
             network: $("stNetwork").value,
-            esploraUrl: $("stEsplora").value.trim(),
+            esploraUrl: esplora,
             registryUrl: $("stRegistry").value.trim(),
             proxyUrl: $("stProxy").value.trim(),
         },
     });
-    if (!r.ok) { $("stMsg").textContent = r.err; return; }
-    // A running wallet is still bound to the old endpoints, so lock it and let it reopen.
-    if (r.data.needsRelock) { await call("lock"); await showLocked(); return; }
+    if (!r.ok) { $("stMsg").textContent = t(String(r.err)); return; }
     formBase = formValues();
     syncDirty();
-    $("stMsg").textContent = "Saved";
+    // The engine rebuilt itself on these settings while staying unlocked: the new network
+    // is already the running one, and the home screen re-reads it when this panel closes.
+    $("stMsg").textContent = t("Settings saved. They take effect right away.");
     if (lastScreen === "welcome" || lastScreen === "setup") setTimeout(leaveSettings, 600);
 };
 
 $("wipeOk").onchange = () => { $("doWipe").disabled = !$("wipeOk").checked; };
 $("doWipe").onclick = async () => {
     const r = await call("wipe");
-    if (!r.ok) { $("stMsg").textContent = r.err; return; }
+    if (!r.ok) { $("stMsg").textContent = t(String(r.err)); return; }
     $("wipeOk").checked = false; $("doWipe").disabled = true;
     btcAddress = null; shownSats = null;
     showOnly("welcome");
@@ -1210,7 +1409,7 @@ $("doWipe").onclick = async () => {
 $("doChangePw").onclick = async () => {
     const r = await call("changePassword", { oldPassword: $("cpOld").value, newPassword: $("cpNew").value });
     $("cpOld").value = $("cpNew").value = "";
-    $("stMsg").textContent = r.ok ? "Password changed" : r.err;
+    $("stMsg").textContent = r.ok ? t("Password changed") : t(String(r.err));
     if (!r.ok) motion.shake($("cpBox"));
 };
 
@@ -1226,20 +1425,27 @@ $("doIssue").onclick = async () => {
 
     const refuse = (msg) => { setErr("issueErr", msg); motion.shake($("issueBox")); };
 
-    if (!ticker || !name) return refuse("A ticker and a name are required");
-    if (!/^\d+$/.test(amount) || BigInt(amount) <= 0n) return refuse("The supply must be a whole number above 0");
-    if (!Number.isInteger(precision) || precision < 0 || precision > 18) return refuse("Decimals must be between 0 and 18");
+    if (!ticker || !name) return refuse(t("A ticker and a name are required"));
+    if (!/^\d+$/.test(amount) || BigInt(amount) <= 0n) return refuse(t("The supply must be a whole number above 0"));
+    if (!Number.isInteger(precision) || precision < 0 || precision > 18) return refuse(t("Decimals must be between 0 and 18"));
 
-    const b = $("doIssue"); b.disabled = true; b.textContent = "Issuing…";
+    const b = $("doIssue"); b.disabled = true; b.textContent = t("Issuing…");
     const r = await call("issueAsset", { ticker, name, precision, amount });
-    b.disabled = false; b.textContent = "Issue";
+    b.disabled = false; b.textContent = t("Issue");
 
-    if (!r.ok) return refuse(r.err);
+    if (!r.ok) return refuse(t(String(r.err)));
 
     $("isTicker").value = $("isName").value = $("isAmount").value = "";
-    $("issueMsg").textContent = `Issued ${r.data.ticker}. ${r.data.assetId}`;
+    $("issueMsg").textContent = t("Issued {ticker}. {assetId}", { ticker: r.data.ticker, assetId: r.data.assetId });
     show("issueMsg");
 };
 
-enhanceAll();
-route();
+// Language first, then the static strings, then the route: the first screen has to arrive
+// already translated.
+(async () => {
+    const s = await call("settings");
+    if (s.ok) setLang(s.data.lang || "en");
+    applyI18n();
+    enhanceAll();
+    await route();
+})();

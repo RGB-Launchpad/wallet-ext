@@ -7,6 +7,7 @@
 import { ok, err } from "./lib/msg.js";
 import { DEFAULTS, NETWORKS, PER_NETWORK } from "./config.js";
 import { migrate, resolve, apply, netDefaults } from "./lib/settings.js";
+import { unseal } from "./lib/vault.js";
 import { SNAPSHOT_DB, RESETTABLE, snapshotPrefix, deleteSnapshots } from "./lib/chain.js";
 
 let creating = null;
@@ -286,8 +287,27 @@ const LOCAL_ONLY = {
 
     async saveSettings({ settings }) {
         await chrome.storage.local.set({ settings: apply(await readRaw(), settings) });
-        // A running wallet is bound to the old endpoints; the UI relocks it.
-        return ok({ changed: true, needsRelock: await offscreenExists() });
+        // A running wallet is bound to the old endpoints and network. The engine rebuilds
+        // itself on the new ones so the interface keeps running unlocked; only when it is
+        // not running does the change wait for the next unlock.
+        if (!(await unlocked())) return ok({ changed: true, applied: false });
+        const r = await toEngine("reconfigure", { settings: await getSettings() });
+        return r.ok ? ok({ changed: true, applied: true, status: r.data }) : r;
+    },
+
+    /**
+     * The recovery phrase, after the wallet password checks out. Read straight from the
+     * vault: revealing it does not need the engine, so it works on a locked wallet too.
+     * The phrase goes to the popup that asked and is not stored anywhere.
+     */
+    async revealPhrase({ password }) {
+        const vault = await getVault();
+        if (!vault) return err("No wallet yet");
+        try {
+            return ok({ mnemonic: await unseal(vault, password) });
+        } catch {
+            return err("Wrong password");
+        }
     },
 
     async lock() {

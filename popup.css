@@ -131,10 +131,6 @@ summary:focus-visible { outline: 2px solid var(--color-glow); outline-offset: 2p
              background: linear-gradient(180deg, rgba(7,11,22,0) 0, rgba(7,11,22,.78) 38%, rgba(7,11,22,.9) 100%); }
 .art .secondary { background: rgba(7,11,22,.85); }
 .hero { padding: 60px 28px 0; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
-/* The running-horse banner on the welcome and unlock screens: transparent webm (mp4 fallback),
-   decoded off the main thread; it replaces the static hero logo. */
-.hero:has(.herovid) { padding-top: 34px; }
-.herovid { width: 100%; aspect-ratio: 16 / 9; display: block; }
 .hero p { margin: 0; font-size: var(--text-lead-lg); line-height: 1.55; color: var(--color-ink-2); }
 .wordmark { font-family: var(--font-display); font-stretch: 125%; font-weight: 900; font-size: var(--text-wordmark); letter-spacing: .01em;
             display: flex; flex-direction: column; gap: var(--gap-2); }
@@ -405,3 +401,26 @@ body.approve { width: auto; height: 100vh; }
 .trade .mid svg { width: 12px; height: 12px; color: var(--color-ink-2); }
 .pair { flex-direction: row; }
 .pair > * { flex: 1; }
+
+/* ---------- boot progress ---------- */
+.boot-prog { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--radius-card);
+             background: var(--color-well); border: 1px solid var(--color-line-soft); }
+.bp-row { display: flex; align-items: center; gap: 10px; font-size: var(--text-meta); color: var(--color-mute-2); }
+.bp-row i { width: 8px; height: 8px; border-radius: 50%; background: var(--color-line-strong); flex: none; transition: background .25s; }
+.bp-row.on { color: var(--color-ink); }
+.bp-row.on i { background: var(--color-gold); box-shadow: 0 0 8px rgba(242,179,61,.5); }
+.bp-row.done { color: var(--color-mute); }
+.bp-row.done i { background: var(--color-up); box-shadow: none; }
+.bp-elapsed { font-size: var(--text-micro); color: var(--color-mute-2); font-family: var(--font-mono); }
+
+/* ---------- indexer presets and latency lamps ---------- */
+.preset { display: flex; align-items: center; gap: 10px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer;
+          border: 1px solid var(--color-line-soft); border-radius: var(--radius-row); background: var(--color-well); }
+.preset:hover { border-color: var(--color-line-strong); }
+.preset.sel { border-color: var(--color-brand); }
+.preset .nm { flex: 1; font-family: var(--font-mono); font-size: var(--text-hint); color: var(--color-ink-2); }
+.lamp { width: 9px; height: 9px; border-radius: 50%; background: var(--color-mute-2); flex: none; }
+.lamp.ok { background: var(--color-up); }
+.lamp.slow { background: var(--color-gold); }
+.lamp.bad { background: var(--color-down); }
+.preset .ms { font-family: var(--font-mono); font-size: var(--text-micro); color: var(--color-mute); min-width: 64px; text-align: right; }

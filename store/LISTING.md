@@ -24,6 +24,11 @@ Features
 - Send RGB assets and plain Bitcoin
 - See how far a pending transfer has confirmed, not just that it is pending
 - Encrypted backup and restore
+- Export covers the bitcoin side and the RGB side separately: the recovery phrase and the
+  private key, shown behind the wallet password; and an encrypted backup of the RGB state
+- Network and endpoint settings apply right away; switching does not lock the wallet
+- Preset indexers with a measured latency light, and an address that is not an Esplora API is refused at save
+- Interface in English or Chinese
 - Sign in to supported sites with your wallet, one approval per signature
 - Per-site authorization you can revoke, and a signing prompt that shows the whole message
 
@@ -78,7 +83,7 @@ assets, and sign messages for sites the user authorizes.
 | `storage` | Stores the encrypted recovery phrase, settings, authorized sites and the wallet's own state. |
 | `unlimitedStorage` | RGB consignments are the only proof of asset ownership and grow with transfer history; eviction would make assets unrecoverable. |
 | `tabs` | Notifies an open page when the user revokes that site's access, so the page stops acting as connected. |
-| Host permission justification（后台只有一个框，两行合并贴这条） | The defaults contacted are the Bitcoin indexer for each network (`mempool.space`, `regtest-indexer.dhorse.fun`), the RGB consignment relay (`proxy.dhorse.fun`, `regtest-proxy.dhorse.fun`), and the platform API (`dhorse.fun`) for the asset index — read a network's whole list at a time, so it never learns which assets the wallet holds. A content script on `dhorse.fun` (and a local copy during development) lets a site request sign-in; it sees nothing until the user approves it. Nothing else is contacted unless the user configures a different endpoint. |
+| Host permission justification (the dashboard has one box; paste the merged lines) | The defaults contacted are the Bitcoin indexer for each network (`mempool.space`, `blockstream.info`, `regtest-indexer.dhorse.fun`), the RGB consignment relay (`proxy.dhorse.fun`, `regtest-proxy.dhorse.fun`), and the platform API (`dhorse.fun`) for the asset index — read a network's whole list at a time, so it never learns which assets the wallet holds. A content script on `dhorse.fun` (and a local copy during development) lets a site request sign-in; it sees nothing until the user approves it. Nothing else is contacted unless the user configures a different endpoint. |
 | Optional host access | Requested only when the user configures a different indexer, proxy or platform endpoint. |
 
 ## Remote code

@@ -2,6 +2,7 @@
 import { call } from "./lib/msg.js";
 import { NETWORKS, OFFICIAL_ORIGINS } from "./config.js";
 import * as motion from "./lib/motion.js";
+import { t, setLang, applyI18n } from "./lib/i18n.js";
 
 const $ = (id) => document.getElementById(id);
 const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) =>
@@ -31,7 +32,7 @@ function hero(origin, title) {
     return `<div class="req-hero">
         <span class="site-mark">${letter ? esc(letter) : ICON.site}</span>
         <span class="origin ${https ? "" : "plain"}">${https ? ICON.lock : ICON.open}${esc(origin)}</span>
-        ${official ? `<span class="official">${ICON.check}Darkhorse's own site</span>` : ""}
+        ${official ? `<span class="official">${ICON.check}${esc(t("Darkhorse's own site"))}</span>` : ""}
         <span class="req-display">${esc(title)}</span>
     </div>`;
 }
@@ -56,15 +57,17 @@ async function offerCard(params, side) {
         const res = await fetch(`${params.apiBase.replace(/\/+$/, "")}/v1/p2p/offers/${encodeURIComponent(params.offerId)}`);
         if (res.ok) offer = await res.json();
     } catch { /* shown as unavailable below */ }
-    if (!offer) return `<p class="err">The offer could not be read from ${esc(params.apiBase)}</p>`;
-    const sats = leg(side === "buy" ? "You pay" : "You receive", BTC, `${offer.priceSats} sats`);
-    const asset = leg(side === "buy" ? "You receive" : "You pay", RGB, `${offer.amount}`, offer.assetId);
+    if (!offer) return `<p class="err">${esc(t("The offer could not be read from {b}", { b: params.apiBase }))}</p>`;
+    const sats = leg(side === "buy" ? t("You pay") : t("You receive"), BTC, `${offer.priceSats} sats`);
+    const asset = leg(side === "buy" ? t("You receive") : t("You pay"), RGB, `${offer.amount}`, offer.assetId);
     const [top, bottom] = side === "buy" ? [sats, asset] : [asset, sats];
     return `<div class="card trade">${top}<div class="mid"><span>${ICON.swap}</span></div>${bottom}</div>`;
 }
 
 (async () => {
     const [r, st] = await Promise.all([call("approvalGet", { reqId }), call("settings")]);
+    if (st.ok) setLang(st.data.lang || "en");
+    applyI18n();
     if (st.ok) {
         const label = NETWORKS[st.data.network]?.label || st.data.network;
         $("net").querySelector("span").textContent = label;
@@ -76,54 +79,51 @@ async function offerCard(params, side) {
 
     const acct = await call("identity");
     const addr = acct.ok
-        ? `<div class="kv"><div class="r"><span>Signing address</span><code title="${esc(acct.data.address)}">${esc(short(acct.data.address))}</code></div></div>`
+        ? `<div class="kv"><div class="r"><span>${esc(t("Signing address"))}</span><code title="${esc(acct.data.address)}">${esc(short(acct.data.address))}</code></div></div>`
         : "";
     let html, action;
 
     if (method === "connect") {
-        action = "Connect";
-        html = `${hero(origin, "Connect")}
-            <p class="fine center">The site will see your identity address and can request signatures.
-              Every signature still needs your approval here.</p>
+        action = t("Connect");
+        html = `${hero(origin, t("Connect"))}
+            <p class="fine center">${esc(t("The site will see your identity address and can request signatures. Every signature still needs your approval here."))}</p>
             ${addr}
-            ${checks([["check", "Connecting moves no assets and does not expose your keys."]])}`;
+            ${checks([["check", t("Connecting moves no assets and does not expose your keys.")]])}`;
     } else if (method === "signMessage") {
-        action = "Sign";
+        action = t("Sign");
         // The full message, never truncated.
-        html = `${hero(origin, "Signature request")}
-            <div class="fld"><span class="eyebrow">Message</span><div class="msg">${esc(params.message)}</div></div>
+        html = `${hero(origin, t("Signature request"))}
+            <div class="fld"><span class="eyebrow">${esc(t("Message"))}</span><div class="msg">${esc(params.message)}</div></div>
             ${addr}
-            ${checks([["check", "Moves no assets. Proves you control the address above."]])}`;
+            ${checks([["check", t("Moves no assets. Proves you control the address above.")]])}`;
     } else if (method === "swapPrepare") {
-        action = "Prepare";
-        html = `${hero(origin, "Prepare a swap")}${await offerCard(params, "buy")}
-            <p class="fine">This opens an invoice of your wallet and picks a UTXO to pay with.
-              Nothing is signed and nothing moves yet.</p>`;
+        action = t("Prepare");
+        html = `${hero(origin, t("Prepare a swap"))}${await offerCard(params, "buy")}
+            <p class="fine">${esc(t("This opens an invoice of your wallet and picks a UTXO to pay with. Nothing is signed and nothing moves yet."))}</p>`;
     } else if (method === "swapSign") {
-        action = "Sign swap";
-        html = `${hero(origin, "Sign a swap")}${await offerCard(params, "buy")}
+        action = t("Sign swap");
+        html = `${hero(origin, t("Sign swap"))}${await offerCard(params, "buy")}
             ${checks([
-                ["check", "Your sats and the asset change hands in one transaction: both or neither."],
-                ["check", "The wallet checks every output against the offer before signing, and refuses if anything differs."],
-                ["next", "The seller signs after you and broadcasts it."],
-                ["next", "Wait for one confirmation before treating the asset as received."],
+                ["check", t("Your sats and the asset change hands in one transaction: both or neither.")],
+                ["check", t("The wallet checks every output against the offer before signing, and refuses if anything differs.")],
+                ["next", t("The seller signs after you and broadcasts it.")],
+                ["next", t("Wait for one confirmation before treating the asset as received.")],
             ])}`;
     } else if (method === "swapColor") {
-        action = "Prepare sale";
-        html = `${hero(origin, "Prepare your sale")}${await offerCard(params, "sell")}
-            <p class="fine">Someone took your offer. This builds the transaction from your wallet and reserves
-              the asset for it. Nothing is signed yet; the buyer signs next.</p>`;
+        action = t("Prepare sale");
+        html = `${hero(origin, t("Prepare your sale"))}${await offerCard(params, "sell")}
+            <p class="fine">${esc(t("Someone took your offer. This builds the transaction from your wallet and reserves the asset for it. Nothing is signed yet; the buyer signs next."))}</p>`;
     } else if (method === "swapFinish") {
-        action = "Sign and broadcast";
-        html = `${hero(origin, "Sign and broadcast your sale")}${await offerCard(params, "sell")}
+        action = t("Sign and broadcast");
+        html = `${hero(origin, t("Sign and broadcast your sale"))}${await offerCard(params, "sell")}
             ${checks([
-                ["check", "The buyer has signed."],
-                ["check", "The asset leaves your wallet and the sats arrive in the same transaction, or neither happens."],
-                ["check", "Only the transaction your wallet prepared can be signed."],
+                ["check", t("The buyer has signed.")],
+                ["check", t("The asset leaves your wallet and the sats arrive in the same transaction, or neither happens.")],
+                ["check", t("Only the transaction your wallet prepared can be signed.")],
             ])}`;
     } else {
-        action = "Approve";
-        html = `${hero(origin, "Unknown request")}<p class="err">${esc(method)}</p>`;
+        action = t("Approve");
+        html = `${hero(origin, t("Unknown request"))}<p class="err">${esc(method)}</p>`;
     }
     $("body").innerHTML = html;
     $("approve").textContent = action;
@@ -137,7 +137,7 @@ async function decide(approve) {
     $("approve").disabled = $("reject").disabled = true;
     const r = await call("approvalDecide", { reqId, approve });
     if (!r.ok) {
-        $("err").textContent = r.err;
+        $("err").textContent = t(String(r.err));
         $("err").hidden = false;
         $("approve").disabled = $("reject").disabled = false;
         return;

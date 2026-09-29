@@ -69,8 +69,31 @@ export const OFFICIAL_ORIGINS = ["https://dhorse.fun"];
 
 export const PER_NETWORK = ["esploraUrl", "proxyUrl", "registryUrl"];
 
+/**
+ * Offered indexers per network, instead of an address the user has to go and find.
+ * Probing `/blocks/tip/height` both measures latency and proves the endpoint is an Esplora
+ * API — that request is the one every Esplora server answers with a bare block height.
+ */
+export const INDEXERS = {
+    Mainnet: [
+        { label: "mempool.space", url: "https://mempool.space/api" },
+        { label: "blockstream.info", url: "https://blockstream.info/api" },
+    ],
+    Signet: [
+        { label: "mempool.space", url: "https://mempool.space/signet/api" },
+        { label: "blockstream.info", url: "https://blockstream.info/signet/api" },
+    ],
+    Testnet4: [
+        { label: "mempool.space", url: "https://mempool.space/testnet4/api" },
+    ],
+    Regtest: [],
+    Local: [],
+};
+
 export const DEFAULTS = {
-    network: "Signet",
+    network: "Mainnet",
+    // Interface language: "en" or "zh".
+    lang: "en",
     minConfirmations: 1,
     invoiceMinutes: 60,
     // Empty colored UTXOs to keep available, and the sats each one carries.

@@ -34,6 +34,23 @@ function settingsOf(args) {
     return { ...DEFAULTS, ...s };
 }
 
+/**
+ * One boot stage, for the create/unlock progress display. Sent to open views; a view that
+ * is not listening simply never lights the row.
+ */
+function stage(step) {
+    chrome.runtime.sendMessage({ to: "views", ev: "stage", step }).catch(() => {});
+}
+
+// Opening the wallet ends with `goOnline`, and that is the only stage that waits on the
+// network. The engine exposes it as one call, so the boundary is hooked here — on the
+// prototype, which every wallet instance created by the bindings shares.
+const goOnline0 = BINDINGS.WasmWallet.prototype.goOnline;
+BINDINGS.WasmWallet.prototype.goOnline = function (...args) {
+    stage("online");
+    return goOnline0.apply(this, args);
+};
+
 function endpoints(settings) {
     const net = NETWORKS[settings.network];
     if (!net) throw new Error(`Unknown network ${settings.network}`);
@@ -76,11 +93,27 @@ async function bootWallet(mnemonic, settings) {
     S.online = online;
     S.settings = settings;
     S.network = settings.network;
+    S.mnemonic = mnemonic;
     S.persisted = st.persisted;
     S.proxyMissing = !proxy;
     S.onlineErr = st.onlineError;
 
     return status();
+}
+
+/**
+ * Reopens the wallet on new settings while it stays unlocked: the phrase is already in
+ * memory here, so a settings save does not have to send the user back to the lock screen.
+ * A network change lands on that network's own snapshot, exactly as an unlock would.
+ */
+async function rebuildWallet(settings) {
+    if (!S.mnemonic) throw new Error("Wallet is locked");
+    // A prepared swap names UTXOs and an invoice of the old engine; drop it rather than
+    // let step two check them against a wallet that no longer exists.
+    S.swaps = new Map();
+    if (S.manager?.dispose) S.manager.dispose();
+    S.manager = S.account = S.wallet = S.online = null;
+    return await bootWallet(S.mnemonic, settings);
 }
 
 async function status() {
@@ -226,10 +259,13 @@ const handlers = {
         await init();
         // rgb-lib's four networks again, not the wallet's own name for the chain.
         const chain = chainOf(settings.network);
+        stage("phrase");
         const m = (mnemonic || "").trim() || generateKeys(chain).mnemonic;
         // Validates the phrase before sealing it.
         restoreKeys(chain, m);
+        stage("encrypt");
         const vault = await seal(m, password);
+        stage("open");
         const st = await bootWallet(m, settings);
         // Returned once, at creation, for the user to write down.
         return { ...st, vault, mnemonic: mnemonic ? undefined : m };
@@ -238,8 +274,23 @@ const handlers = {
     async unlock(args) {
         const { password, vault } = args;
         if (!vault) throw new Error("No wallet yet");
+        stage("phrase");
         const m = await unseal(vault, password);      // throws on a wrong password
+        stage("open");
         return await bootWallet(m, settingsOf(args));
+    },
+
+    /**
+     * Applies new settings without locking: rebuilds the engine on them and reports the
+     * new status. Refused while a transfer is still waiting for its counterparty, because
+     * that transfer's state lives inside the engine being torn down.
+     */
+    async reconfigure(args) {
+        const pending = S.account ? await S.account.pendingHandovers().catch(() => []) : [];
+        if (pending.length) {
+            throw new Error("A transfer is waiting for its recipient. Let it finish before changing settings.");
+        }
+        return await rebuildWallet(settingsOf(args));
     },
 
     /** Reseals the phrase. Wallet state in IndexedDB is untouched. */
