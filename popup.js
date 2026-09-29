@@ -1167,11 +1167,12 @@ $("stBackup").onclick = () => { leaveSettings(); gotoExport("rgb"); };
 let settingsSnapshot = null;
 let formBase = "";
 
-// All three endpoints take part in dirty detection: an edit to any of them has to raise
-// the Save bar, or the edit sits there looking saved.
+// Every endpoint and the custom list take part in dirty detection: an edit to any of them
+// has to raise the Save bar, or the edit sits there looking saved.
 const formValues = () => JSON.stringify([
     $("stNetwork").value, $("stEsplora").value.trim(),
     $("stRegistry").value.trim(), $("stProxy").value.trim(),
+    [...extras].sort(),
 ]);
 
 /** Host of an endpoint, for the row summary. */
@@ -1196,12 +1197,14 @@ function fillEndpoints(network) {
     $("stEsplora").value = saved.esploraUrl ?? def.esploraUrl ?? "";
     $("stProxy").value = saved.proxyUrl ?? def.proxyUrl ?? "";
     $("stRegistry").value = saved.registryUrl ?? def.registryUrl ?? "";
+    extras = [...(saved.esploraExtras ?? def.esploraExtras ?? [])];
 }
 
-// ---------- indexer presets with a latency lamp ----------
-// The lamp measures the preset the wallet offers, not just some address: the request is
-// `/blocks/tip/height`, which both times the round trip and proves the endpoint answers
-// like an Esplora API.
+// ---------- the indexer list ----------
+// One rule for every row: an address typed into the field is a member of the list. It is
+// measured like the rest, chosen like the rest, and pinned into the list when settings are
+// saved. The lamp probes `/blocks/tip/height` — one request that both times the round trip
+// and proves the endpoint answers like an Esplora API.
 /**
  * What the endpoint is, and how fast. `answered` separates "served something that is not
  * an Esplora API" from "nothing came back": only the first proves the address is wrong,
@@ -1227,36 +1230,70 @@ async function probe(url) {
 const lampClass = (res) => !res.esplora ? "bad" : res.ms < 1000 ? "ok" : res.ms < 3000 ? "slow" : "bad";
 const lampText = (res) => (res.esplora ? t("{ms} ms", { ms: res.ms }) : t("unreachable"));
 
-async function renderPresets() {
-    const net = $("stNetwork").value;
-    const list = INDEXERS[net] || [];
+const probeCache = new Map();   // url -> probe result, so re-rendering keeps the lamps lit
+let extras = [];                // custom indexers kept for the network in the dropdown
+
+/** Rows: the wallet's presets, then the custom ones, then whatever is being typed. */
+function indexerRows() {
+    const typed = $("stEsplora").value.trim();
+    const rows = (INDEXERS[$("stNetwork").value] || []).map((p) => ({ ...p, custom: false }));
+    for (const url of extras) {
+        if (!rows.some((r) => r.url === url)) rows.push({ url, label: hostOf(url), custom: true });
+    }
+    if (typed && !rows.some((r) => r.url === typed)) {
+        rows.push({ url: typed, label: hostOf(typed), custom: true, typing: true });
+    }
+    return rows;
+}
+
+function renderPresets() {
     const box = $("esPresets");
-    if (!list.length) { box.innerHTML = ""; return; }
-    box.innerHTML = `<div class="eyebrow">${esc(t("Preset indexers"))}</div>` + list.map((p) =>
-        `<div class="preset" data-url="${esc(p.url)}"><span class="lamp"></span>
-            <span class="nm">${esc(p.label)}</span><span class="ms">…</span></div>`).join("");
+    const rows = indexerRows();
+    const current = $("stEsplora").value.trim();
+    if (!rows.length) { box.innerHTML = ""; return; }
+    box.innerHTML = `<div class="eyebrow">${esc(t("Indexer list"))}</div>` + rows.map((r) => {
+        const res = probeCache.get(r.url);
+        return `<div class="preset${r.url === current ? " sel" : ""}" data-url="${esc(r.url)}">
+            <span class="lamp ${res ? lampClass(res) : ""}"></span>
+            <span class="nm">${esc(r.label)}</span>
+            <span class="ms">${res ? esc(lampText(res)) : "…"}</span>
+            ${r.custom && !r.typing ? `<button class="rm" data-rm="${esc(r.url)}">${esc(t("Remove"))}</button>` : ""}
+        </div>`;
+    }).join("");
     for (const row of box.querySelectorAll(".preset")) {
         row.onclick = () => {
             $("stEsplora").value = row.dataset.url;
             syncDirty();
-            for (const r of box.querySelectorAll(".preset")) r.classList.toggle("sel", r === row);
+            renderPresets();
         };
-        // Selected-by-value, so a preset already in the field reads as chosen.
-        row.classList.toggle("sel", row.dataset.url === $("stEsplora").value.trim());
     }
-    await testPresets();
+    for (const b of box.querySelectorAll("[data-rm]")) {
+        // Dropping a row is an edit like any other: it waits for Save like everything else.
+        b.onclick = (e) => {
+            e.stopPropagation();
+            extras = extras.filter((u) => u !== b.dataset.rm);
+            syncDirty();
+            renderPresets();
+        };
+    }
 }
 
 async function testPresets() {
-    const rows = [...$("esPresets").querySelectorAll(".preset")];
-    await Promise.all(rows.map(async (row) => {
-        const res = await probe(row.dataset.url);
-        const lamp = row.querySelector(".lamp");
-        lamp.className = `lamp ${lampClass(res)}`;
-        row.querySelector(".ms").textContent = lampText(res);
-    }));
+    const rows = indexerRows();
+    await Promise.all(rows.map(async (r) => probeCache.set(r.url, await probe(r.url))));
+    renderPresets();
 }
 $("esRetest").onclick = testPresets;
+
+// Typing is live: the address appears in the list at once and gets measured as soon as
+// typing pauses.
+let typeTimer = null;
+$("stEsplora").oninput = () => {
+    syncDirty();
+    renderPresets();
+    clearTimeout(typeTimer);
+    typeTimer = setTimeout(testPresets, 600);
+};
 
 async function loadSettingsForm() {
     const r = await call("settings");
@@ -1276,7 +1313,6 @@ $("stNetwork").onchange = async () => {
     syncDirty();
     await renderPresets();
 };
-$("stEsplora").oninput = syncDirty;
 $("stRegistry").oninput = syncDirty;
 $("stProxy").oninput = syncDirty;
 
@@ -1378,17 +1414,27 @@ $("doSaveSettings").onclick = async () => {
             $("stMsg").textContent = t("This endpoint did not answer like an Esplora API.");
             return;
         }
+        // Entering an address joins the list, and saving is what pins it there. Presets
+        // are already members; anything else is kept with the network it serves.
+        const known = (INDEXERS[$("stNetwork").value] || []).map((p) => p.url);
+        if (!known.includes(esplora) && !extras.includes(esplora)) extras.push(esplora);
     }
 
     const r = await call("saveSettings", {
         settings: {
             network: $("stNetwork").value,
             esploraUrl: esplora,
+            esploraExtras: extras,
             registryUrl: $("stRegistry").value.trim(),
             proxyUrl: $("stProxy").value.trim(),
         },
     });
     if (!r.ok) { $("stMsg").textContent = t(String(r.err)); return; }
+    // Re-read the snapshot so the pinned list survives a network round-trip in the
+    // dropdown: fillEndpoints would otherwise restore it from the stale copy.
+    const fresh = await call("settings");
+    if (fresh.ok) settingsSnapshot = fresh.data;
+    renderPresets();
     formBase = formValues();
     syncDirty();
     // The engine rebuilt itself on these settings while staying unlocked: the new network

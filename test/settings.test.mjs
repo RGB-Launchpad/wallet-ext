@@ -75,6 +75,17 @@ test("an empty string is a real value, not a fallback to the default", () => {
     assert.equal(resolve(raw, "Signet").proxyUrl, "");
 });
 
+test("custom indexers join the list and stay per network", () => {
+    let { raw } = migrate(undefined);
+    assert.deepEqual(resolve(raw, "Signet").esploraExtras, []);
+    raw = apply(raw, { network: "Signet", esploraExtras: ["https://my.node/api"] });
+    assert.deepEqual(resolve(raw, "Signet").esploraExtras, ["https://my.node/api"]);
+    // The other network's list is untouched.
+    assert.deepEqual(resolve(raw, "Mainnet").esploraExtras, []);
+    raw = apply(raw, { network: "Signet", esploraExtras: ["https://my.node/api", "https://other.node/api"] });
+    assert.deepEqual(resolve(raw, "Signet").esploraExtras, ["https://my.node/api", "https://other.node/api"]);
+});
+
 test("every network has the endpoints the resolver needs", () => {
     for (const [name, n] of Object.entries(NETWORKS)) {
         assert.ok(n.label, `${name} has no label`);

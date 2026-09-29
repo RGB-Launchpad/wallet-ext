@@ -67,7 +67,7 @@ export const chainOf = (network) => NETWORKS[network]?.chain || network;
  */
 export const OFFICIAL_ORIGINS = ["https://dhorse.fun"];
 
-export const PER_NETWORK = ["esploraUrl", "proxyUrl", "registryUrl"];
+export const PER_NETWORK = ["esploraUrl", "proxyUrl", "registryUrl", "esploraExtras"];
 
 /**
  * Offered indexers per network, instead of an address the user has to go and find.

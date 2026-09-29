@@ -424,3 +424,6 @@ body.approve { width: auto; height: 100vh; }
 .lamp.slow { background: var(--color-gold); }
 .lamp.bad { background: var(--color-down); }
 .preset .ms { font-family: var(--font-mono); font-size: var(--text-micro); color: var(--color-mute); min-width: 64px; text-align: right; }
+.preset .rm { margin-left: 2px; padding: 2px 6px; border: 0; border-radius: 6px; background: transparent;
+              color: var(--color-mute); font-size: var(--text-micro); cursor: pointer; }
+.preset .rm:hover { color: var(--color-down); background: var(--color-card-soft); }

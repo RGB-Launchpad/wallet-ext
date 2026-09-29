@@ -286,12 +286,18 @@ const LOCAL_ONLY = {
     },
 
     async saveSettings({ settings }) {
+        const before = await getSettings();
         await chrome.storage.local.set({ settings: apply(await readRaw(), settings) });
-        // A running wallet is bound to the old endpoints and network. The engine rebuilds
-        // itself on the new ones so the interface keeps running unlocked; only when it is
-        // not running does the change wait for the next unlock.
+        const after = await getSettings();
+        // Only the network and the two engine endpoints bind the running engine. A change
+        // to anything else — language, the asset index, the custom indexer list — is read
+        // per use and must not tear the wallet down.
+        const rebound = ["network", "esploraUrl", "proxyUrl"].some((k) => before[k] !== after[k]);
+        if (!rebound) return ok({ changed: true, applied: false });
+        // The engine rebuilds itself on the new settings so the interface keeps running
+        // unlocked; only when it is not running does the change wait for the next unlock.
         if (!(await unlocked())) return ok({ changed: true, applied: false });
-        const r = await toEngine("reconfigure", { settings: await getSettings() });
+        const r = await toEngine("reconfigure", { settings: after });
         return r.ok ? ok({ changed: true, applied: true, status: r.data }) : r;
     },
 

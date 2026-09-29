@@ -37,3 +37,8 @@ recovery phrase and the Bitcoin private key can be shown and copied from Export,
 wallet password; the RGB side of Export carries the encrypted backup. The interface
 speaks English or Chinese. Creating or unlocking a wallet reports its stages instead of one
 waiting button. The settings icon is a gear again.
+
+**What is new in 0.16.1.** An indexer you type joins the list: it is measured with the
+rest, picked from the list like the rest, and kept after the wallet reopens. A saved entry
+can be removed from the list. Only a change to the network or the engine endpoints
+rebuilds the wallet; language and list edits no longer do.
