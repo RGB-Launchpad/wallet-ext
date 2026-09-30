@@ -20,6 +20,10 @@ var __commonJS = (cb, mod) => function __require() {
     throw mod = 0, e;
   }
 };
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -37,1799 +41,10 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/base64-js/index.js
-var require_base64_js = __commonJS({
-  "node_modules/base64-js/index.js"(exports) {
-    "use strict";
-    init_buffer_shim();
-    exports.byteLength = byteLength;
-    exports.toByteArray = toByteArray;
-    exports.fromByteArray = fromByteArray;
-    var lookup = [];
-    var revLookup = [];
-    var Arr = typeof Uint8Array !== "undefined" ? Uint8Array : Array;
-    var code = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    for (i = 0, len = code.length; i < len; ++i) {
-      lookup[i] = code[i];
-      revLookup[code.charCodeAt(i)] = i;
-    }
-    var i;
-    var len;
-    revLookup["-".charCodeAt(0)] = 62;
-    revLookup["_".charCodeAt(0)] = 63;
-    function getLens(b642) {
-      var len2 = b642.length;
-      if (len2 % 4 > 0) {
-        throw new Error("Invalid string. Length must be a multiple of 4");
-      }
-      var validLen = b642.indexOf("=");
-      if (validLen === -1) validLen = len2;
-      var placeHoldersLen = validLen === len2 ? 0 : 4 - validLen % 4;
-      return [validLen, placeHoldersLen];
-    }
-    function byteLength(b642) {
-      var lens = getLens(b642);
-      var validLen = lens[0];
-      var placeHoldersLen = lens[1];
-      return (validLen + placeHoldersLen) * 3 / 4 - placeHoldersLen;
-    }
-    function _byteLength(b642, validLen, placeHoldersLen) {
-      return (validLen + placeHoldersLen) * 3 / 4 - placeHoldersLen;
-    }
-    function toByteArray(b642) {
-      var tmp;
-      var lens = getLens(b642);
-      var validLen = lens[0];
-      var placeHoldersLen = lens[1];
-      var arr = new Arr(_byteLength(b642, validLen, placeHoldersLen));
-      var curByte = 0;
-      var len2 = placeHoldersLen > 0 ? validLen - 4 : validLen;
-      var i2;
-      for (i2 = 0; i2 < len2; i2 += 4) {
-        tmp = revLookup[b642.charCodeAt(i2)] << 18 | revLookup[b642.charCodeAt(i2 + 1)] << 12 | revLookup[b642.charCodeAt(i2 + 2)] << 6 | revLookup[b642.charCodeAt(i2 + 3)];
-        arr[curByte++] = tmp >> 16 & 255;
-        arr[curByte++] = tmp >> 8 & 255;
-        arr[curByte++] = tmp & 255;
-      }
-      if (placeHoldersLen === 2) {
-        tmp = revLookup[b642.charCodeAt(i2)] << 2 | revLookup[b642.charCodeAt(i2 + 1)] >> 4;
-        arr[curByte++] = tmp & 255;
-      }
-      if (placeHoldersLen === 1) {
-        tmp = revLookup[b642.charCodeAt(i2)] << 10 | revLookup[b642.charCodeAt(i2 + 1)] << 4 | revLookup[b642.charCodeAt(i2 + 2)] >> 2;
-        arr[curByte++] = tmp >> 8 & 255;
-        arr[curByte++] = tmp & 255;
-      }
-      return arr;
-    }
-    function tripletToBase64(num) {
-      return lookup[num >> 18 & 63] + lookup[num >> 12 & 63] + lookup[num >> 6 & 63] + lookup[num & 63];
-    }
-    function encodeChunk(uint8, start, end) {
-      var tmp;
-      var output = [];
-      for (var i2 = start; i2 < end; i2 += 3) {
-        tmp = (uint8[i2] << 16 & 16711680) + (uint8[i2 + 1] << 8 & 65280) + (uint8[i2 + 2] & 255);
-        output.push(tripletToBase64(tmp));
-      }
-      return output.join("");
-    }
-    function fromByteArray(uint8) {
-      var tmp;
-      var len2 = uint8.length;
-      var extraBytes = len2 % 3;
-      var parts = [];
-      var maxChunkLength = 16383;
-      for (var i2 = 0, len22 = len2 - extraBytes; i2 < len22; i2 += maxChunkLength) {
-        parts.push(encodeChunk(uint8, i2, i2 + maxChunkLength > len22 ? len22 : i2 + maxChunkLength));
-      }
-      if (extraBytes === 1) {
-        tmp = uint8[len2 - 1];
-        parts.push(
-          lookup[tmp >> 2] + lookup[tmp << 4 & 63] + "=="
-        );
-      } else if (extraBytes === 2) {
-        tmp = (uint8[len2 - 2] << 8) + uint8[len2 - 1];
-        parts.push(
-          lookup[tmp >> 10] + lookup[tmp >> 4 & 63] + lookup[tmp << 2 & 63] + "="
-        );
-      }
-      return parts.join("");
-    }
-  }
-});
-
-// node_modules/ieee754/index.js
-var require_ieee754 = __commonJS({
-  "node_modules/ieee754/index.js"(exports) {
-    init_buffer_shim();
-    exports.read = function(buffer, offset, isLE, mLen, nBytes) {
-      var e, m;
-      var eLen = nBytes * 8 - mLen - 1;
-      var eMax = (1 << eLen) - 1;
-      var eBias = eMax >> 1;
-      var nBits = -7;
-      var i = isLE ? nBytes - 1 : 0;
-      var d = isLE ? -1 : 1;
-      var s = buffer[offset + i];
-      i += d;
-      e = s & (1 << -nBits) - 1;
-      s >>= -nBits;
-      nBits += eLen;
-      for (; nBits > 0; e = e * 256 + buffer[offset + i], i += d, nBits -= 8) {
-      }
-      m = e & (1 << -nBits) - 1;
-      e >>= -nBits;
-      nBits += mLen;
-      for (; nBits > 0; m = m * 256 + buffer[offset + i], i += d, nBits -= 8) {
-      }
-      if (e === 0) {
-        e = 1 - eBias;
-      } else if (e === eMax) {
-        return m ? NaN : (s ? -1 : 1) * Infinity;
-      } else {
-        m = m + Math.pow(2, mLen);
-        e = e - eBias;
-      }
-      return (s ? -1 : 1) * m * Math.pow(2, e - mLen);
-    };
-    exports.write = function(buffer, value, offset, isLE, mLen, nBytes) {
-      var e, m, c;
-      var eLen = nBytes * 8 - mLen - 1;
-      var eMax = (1 << eLen) - 1;
-      var eBias = eMax >> 1;
-      var rt = mLen === 23 ? Math.pow(2, -24) - Math.pow(2, -77) : 0;
-      var i = isLE ? 0 : nBytes - 1;
-      var d = isLE ? 1 : -1;
-      var s = value < 0 || value === 0 && 1 / value < 0 ? 1 : 0;
-      value = Math.abs(value);
-      if (isNaN(value) || value === Infinity) {
-        m = isNaN(value) ? 1 : 0;
-        e = eMax;
-      } else {
-        e = Math.floor(Math.log(value) / Math.LN2);
-        if (value * (c = Math.pow(2, -e)) < 1) {
-          e--;
-          c *= 2;
-        }
-        if (e + eBias >= 1) {
-          value += rt / c;
-        } else {
-          value += rt * Math.pow(2, 1 - eBias);
-        }
-        if (value * c >= 2) {
-          e++;
-          c /= 2;
-        }
-        if (e + eBias >= eMax) {
-          m = 0;
-          e = eMax;
-        } else if (e + eBias >= 1) {
-          m = (value * c - 1) * Math.pow(2, mLen);
-          e = e + eBias;
-        } else {
-          m = value * Math.pow(2, eBias - 1) * Math.pow(2, mLen);
-          e = 0;
-        }
-      }
-      for (; mLen >= 8; buffer[offset + i] = m & 255, i += d, m /= 256, mLen -= 8) {
-      }
-      e = e << mLen | m;
-      eLen += mLen;
-      for (; eLen > 0; buffer[offset + i] = e & 255, i += d, e /= 256, eLen -= 8) {
-      }
-      buffer[offset + i - d] |= s * 128;
-    };
-  }
-});
-
-// node_modules/buffer/index.js
-var require_buffer = __commonJS({
-  "node_modules/buffer/index.js"(exports) {
-    "use strict";
-    init_buffer_shim();
-    var base64 = require_base64_js();
-    var ieee754 = require_ieee754();
-    var customInspectSymbol = typeof Symbol === "function" && typeof Symbol["for"] === "function" ? Symbol["for"]("nodejs.util.inspect.custom") : null;
-    exports.Buffer = Buffer3;
-    exports.SlowBuffer = SlowBuffer;
-    exports.INSPECT_MAX_BYTES = 50;
-    var K_MAX_LENGTH = 2147483647;
-    exports.kMaxLength = K_MAX_LENGTH;
-    Buffer3.TYPED_ARRAY_SUPPORT = typedArraySupport();
-    if (!Buffer3.TYPED_ARRAY_SUPPORT && typeof console !== "undefined" && typeof console.error === "function") {
-      console.error(
-        "This browser lacks typed array (Uint8Array) support which is required by `buffer` v5.x. Use `buffer` v4.x if you require old browser support."
-      );
-    }
-    function typedArraySupport() {
-      try {
-        const arr = new Uint8Array(1);
-        const proto = { foo: function() {
-          return 42;
-        } };
-        Object.setPrototypeOf(proto, Uint8Array.prototype);
-        Object.setPrototypeOf(arr, proto);
-        return arr.foo() === 42;
-      } catch (e) {
-        return false;
-      }
-    }
-    Object.defineProperty(Buffer3.prototype, "parent", {
-      enumerable: true,
-      get: function() {
-        if (!Buffer3.isBuffer(this)) return void 0;
-        return this.buffer;
-      }
-    });
-    Object.defineProperty(Buffer3.prototype, "offset", {
-      enumerable: true,
-      get: function() {
-        if (!Buffer3.isBuffer(this)) return void 0;
-        return this.byteOffset;
-      }
-    });
-    function createBuffer(length) {
-      if (length > K_MAX_LENGTH) {
-        throw new RangeError('The value "' + length + '" is invalid for option "size"');
-      }
-      const buf = new Uint8Array(length);
-      Object.setPrototypeOf(buf, Buffer3.prototype);
-      return buf;
-    }
-    function Buffer3(arg, encodingOrOffset, length) {
-      if (typeof arg === "number") {
-        if (typeof encodingOrOffset === "string") {
-          throw new TypeError(
-            'The "string" argument must be of type string. Received type number'
-          );
-        }
-        return allocUnsafe(arg);
-      }
-      return from(arg, encodingOrOffset, length);
-    }
-    Buffer3.poolSize = 8192;
-    function from(value, encodingOrOffset, length) {
-      if (typeof value === "string") {
-        return fromString(value, encodingOrOffset);
-      }
-      if (ArrayBuffer.isView(value)) {
-        return fromArrayView(value);
-      }
-      if (value == null) {
-        throw new TypeError(
-          "The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type " + typeof value
-        );
-      }
-      if (isInstance(value, ArrayBuffer) || value && isInstance(value.buffer, ArrayBuffer)) {
-        return fromArrayBuffer(value, encodingOrOffset, length);
-      }
-      if (typeof SharedArrayBuffer !== "undefined" && (isInstance(value, SharedArrayBuffer) || value && isInstance(value.buffer, SharedArrayBuffer))) {
-        return fromArrayBuffer(value, encodingOrOffset, length);
-      }
-      if (typeof value === "number") {
-        throw new TypeError(
-          'The "value" argument must not be of type number. Received type number'
-        );
-      }
-      const valueOf = value.valueOf && value.valueOf();
-      if (valueOf != null && valueOf !== value) {
-        return Buffer3.from(valueOf, encodingOrOffset, length);
-      }
-      const b = fromObject(value);
-      if (b) return b;
-      if (typeof Symbol !== "undefined" && Symbol.toPrimitive != null && typeof value[Symbol.toPrimitive] === "function") {
-        return Buffer3.from(value[Symbol.toPrimitive]("string"), encodingOrOffset, length);
-      }
-      throw new TypeError(
-        "The first argument must be one of type string, Buffer, ArrayBuffer, Array, or Array-like Object. Received type " + typeof value
-      );
-    }
-    Buffer3.from = function(value, encodingOrOffset, length) {
-      return from(value, encodingOrOffset, length);
-    };
-    Object.setPrototypeOf(Buffer3.prototype, Uint8Array.prototype);
-    Object.setPrototypeOf(Buffer3, Uint8Array);
-    function assertSize(size) {
-      if (typeof size !== "number") {
-        throw new TypeError('"size" argument must be of type number');
-      } else if (size < 0) {
-        throw new RangeError('The value "' + size + '" is invalid for option "size"');
-      }
-    }
-    function alloc(size, fill, encoding) {
-      assertSize(size);
-      if (size <= 0) {
-        return createBuffer(size);
-      }
-      if (fill !== void 0) {
-        return typeof encoding === "string" ? createBuffer(size).fill(fill, encoding) : createBuffer(size).fill(fill);
-      }
-      return createBuffer(size);
-    }
-    Buffer3.alloc = function(size, fill, encoding) {
-      return alloc(size, fill, encoding);
-    };
-    function allocUnsafe(size) {
-      assertSize(size);
-      return createBuffer(size < 0 ? 0 : checked(size) | 0);
-    }
-    Buffer3.allocUnsafe = function(size) {
-      return allocUnsafe(size);
-    };
-    Buffer3.allocUnsafeSlow = function(size) {
-      return allocUnsafe(size);
-    };
-    function fromString(string, encoding) {
-      if (typeof encoding !== "string" || encoding === "") {
-        encoding = "utf8";
-      }
-      if (!Buffer3.isEncoding(encoding)) {
-        throw new TypeError("Unknown encoding: " + encoding);
-      }
-      const length = byteLength(string, encoding) | 0;
-      let buf = createBuffer(length);
-      const actual = buf.write(string, encoding);
-      if (actual !== length) {
-        buf = buf.slice(0, actual);
-      }
-      return buf;
-    }
-    function fromArrayLike(array) {
-      const length = array.length < 0 ? 0 : checked(array.length) | 0;
-      const buf = createBuffer(length);
-      for (let i = 0; i < length; i += 1) {
-        buf[i] = array[i] & 255;
-      }
-      return buf;
-    }
-    function fromArrayView(arrayView) {
-      if (isInstance(arrayView, Uint8Array)) {
-        const copy = new Uint8Array(arrayView);
-        return fromArrayBuffer(copy.buffer, copy.byteOffset, copy.byteLength);
-      }
-      return fromArrayLike(arrayView);
-    }
-    function fromArrayBuffer(array, byteOffset, length) {
-      if (byteOffset < 0 || array.byteLength < byteOffset) {
-        throw new RangeError('"offset" is outside of buffer bounds');
-      }
-      if (array.byteLength < byteOffset + (length || 0)) {
-        throw new RangeError('"length" is outside of buffer bounds');
-      }
-      let buf;
-      if (byteOffset === void 0 && length === void 0) {
-        buf = new Uint8Array(array);
-      } else if (length === void 0) {
-        buf = new Uint8Array(array, byteOffset);
-      } else {
-        buf = new Uint8Array(array, byteOffset, length);
-      }
-      Object.setPrototypeOf(buf, Buffer3.prototype);
-      return buf;
-    }
-    function fromObject(obj) {
-      if (Buffer3.isBuffer(obj)) {
-        const len = checked(obj.length) | 0;
-        const buf = createBuffer(len);
-        if (buf.length === 0) {
-          return buf;
-        }
-        obj.copy(buf, 0, 0, len);
-        return buf;
-      }
-      if (obj.length !== void 0) {
-        if (typeof obj.length !== "number" || numberIsNaN(obj.length)) {
-          return createBuffer(0);
-        }
-        return fromArrayLike(obj);
-      }
-      if (obj.type === "Buffer" && Array.isArray(obj.data)) {
-        return fromArrayLike(obj.data);
-      }
-    }
-    function checked(length) {
-      if (length >= K_MAX_LENGTH) {
-        throw new RangeError("Attempt to allocate Buffer larger than maximum size: 0x" + K_MAX_LENGTH.toString(16) + " bytes");
-      }
-      return length | 0;
-    }
-    function SlowBuffer(length) {
-      if (+length != length) {
-        length = 0;
-      }
-      return Buffer3.alloc(+length);
-    }
-    Buffer3.isBuffer = function isBuffer(b) {
-      return b != null && b._isBuffer === true && b !== Buffer3.prototype;
-    };
-    Buffer3.compare = function compare(a, b) {
-      if (isInstance(a, Uint8Array)) a = Buffer3.from(a, a.offset, a.byteLength);
-      if (isInstance(b, Uint8Array)) b = Buffer3.from(b, b.offset, b.byteLength);
-      if (!Buffer3.isBuffer(a) || !Buffer3.isBuffer(b)) {
-        throw new TypeError(
-          'The "buf1", "buf2" arguments must be one of type Buffer or Uint8Array'
-        );
-      }
-      if (a === b) return 0;
-      let x = a.length;
-      let y = b.length;
-      for (let i = 0, len = Math.min(x, y); i < len; ++i) {
-        if (a[i] !== b[i]) {
-          x = a[i];
-          y = b[i];
-          break;
-        }
-      }
-      if (x < y) return -1;
-      if (y < x) return 1;
-      return 0;
-    };
-    Buffer3.isEncoding = function isEncoding(encoding) {
-      switch (String(encoding).toLowerCase()) {
-        case "hex":
-        case "utf8":
-        case "utf-8":
-        case "ascii":
-        case "latin1":
-        case "binary":
-        case "base64":
-        case "ucs2":
-        case "ucs-2":
-        case "utf16le":
-        case "utf-16le":
-          return true;
-        default:
-          return false;
-      }
-    };
-    Buffer3.concat = function concat(list, length) {
-      if (!Array.isArray(list)) {
-        throw new TypeError('"list" argument must be an Array of Buffers');
-      }
-      if (list.length === 0) {
-        return Buffer3.alloc(0);
-      }
-      let i;
-      if (length === void 0) {
-        length = 0;
-        for (i = 0; i < list.length; ++i) {
-          length += list[i].length;
-        }
-      }
-      const buffer = Buffer3.allocUnsafe(length);
-      let pos = 0;
-      for (i = 0; i < list.length; ++i) {
-        let buf = list[i];
-        if (isInstance(buf, Uint8Array)) {
-          if (pos + buf.length > buffer.length) {
-            if (!Buffer3.isBuffer(buf)) buf = Buffer3.from(buf);
-            buf.copy(buffer, pos);
-          } else {
-            Uint8Array.prototype.set.call(
-              buffer,
-              buf,
-              pos
-            );
-          }
-        } else if (!Buffer3.isBuffer(buf)) {
-          throw new TypeError('"list" argument must be an Array of Buffers');
-        } else {
-          buf.copy(buffer, pos);
-        }
-        pos += buf.length;
-      }
-      return buffer;
-    };
-    function byteLength(string, encoding) {
-      if (Buffer3.isBuffer(string)) {
-        return string.length;
-      }
-      if (ArrayBuffer.isView(string) || isInstance(string, ArrayBuffer)) {
-        return string.byteLength;
-      }
-      if (typeof string !== "string") {
-        throw new TypeError(
-          'The "string" argument must be one of type string, Buffer, or ArrayBuffer. Received type ' + typeof string
-        );
-      }
-      const len = string.length;
-      const mustMatch = arguments.length > 2 && arguments[2] === true;
-      if (!mustMatch && len === 0) return 0;
-      let loweredCase = false;
-      for (; ; ) {
-        switch (encoding) {
-          case "ascii":
-          case "latin1":
-          case "binary":
-            return len;
-          case "utf8":
-          case "utf-8":
-            return utf8ToBytes(string).length;
-          case "ucs2":
-          case "ucs-2":
-          case "utf16le":
-          case "utf-16le":
-            return len * 2;
-          case "hex":
-            return len >>> 1;
-          case "base64":
-            return base64ToBytes(string).length;
-          default:
-            if (loweredCase) {
-              return mustMatch ? -1 : utf8ToBytes(string).length;
-            }
-            encoding = ("" + encoding).toLowerCase();
-            loweredCase = true;
-        }
-      }
-    }
-    Buffer3.byteLength = byteLength;
-    function slowToString(encoding, start, end) {
-      let loweredCase = false;
-      if (start === void 0 || start < 0) {
-        start = 0;
-      }
-      if (start > this.length) {
-        return "";
-      }
-      if (end === void 0 || end > this.length) {
-        end = this.length;
-      }
-      if (end <= 0) {
-        return "";
-      }
-      end >>>= 0;
-      start >>>= 0;
-      if (end <= start) {
-        return "";
-      }
-      if (!encoding) encoding = "utf8";
-      while (true) {
-        switch (encoding) {
-          case "hex":
-            return hexSlice(this, start, end);
-          case "utf8":
-          case "utf-8":
-            return utf8Slice(this, start, end);
-          case "ascii":
-            return asciiSlice(this, start, end);
-          case "latin1":
-          case "binary":
-            return latin1Slice(this, start, end);
-          case "base64":
-            return base64Slice(this, start, end);
-          case "ucs2":
-          case "ucs-2":
-          case "utf16le":
-          case "utf-16le":
-            return utf16leSlice(this, start, end);
-          default:
-            if (loweredCase) throw new TypeError("Unknown encoding: " + encoding);
-            encoding = (encoding + "").toLowerCase();
-            loweredCase = true;
-        }
-      }
-    }
-    Buffer3.prototype._isBuffer = true;
-    function swap(b, n, m) {
-      const i = b[n];
-      b[n] = b[m];
-      b[m] = i;
-    }
-    Buffer3.prototype.swap16 = function swap16() {
-      const len = this.length;
-      if (len % 2 !== 0) {
-        throw new RangeError("Buffer size must be a multiple of 16-bits");
-      }
-      for (let i = 0; i < len; i += 2) {
-        swap(this, i, i + 1);
-      }
-      return this;
-    };
-    Buffer3.prototype.swap32 = function swap32() {
-      const len = this.length;
-      if (len % 4 !== 0) {
-        throw new RangeError("Buffer size must be a multiple of 32-bits");
-      }
-      for (let i = 0; i < len; i += 4) {
-        swap(this, i, i + 3);
-        swap(this, i + 1, i + 2);
-      }
-      return this;
-    };
-    Buffer3.prototype.swap64 = function swap64() {
-      const len = this.length;
-      if (len % 8 !== 0) {
-        throw new RangeError("Buffer size must be a multiple of 64-bits");
-      }
-      for (let i = 0; i < len; i += 8) {
-        swap(this, i, i + 7);
-        swap(this, i + 1, i + 6);
-        swap(this, i + 2, i + 5);
-        swap(this, i + 3, i + 4);
-      }
-      return this;
-    };
-    Buffer3.prototype.toString = function toString() {
-      const length = this.length;
-      if (length === 0) return "";
-      if (arguments.length === 0) return utf8Slice(this, 0, length);
-      return slowToString.apply(this, arguments);
-    };
-    Buffer3.prototype.toLocaleString = Buffer3.prototype.toString;
-    Buffer3.prototype.equals = function equals(b) {
-      if (!Buffer3.isBuffer(b)) throw new TypeError("Argument must be a Buffer");
-      if (this === b) return true;
-      return Buffer3.compare(this, b) === 0;
-    };
-    Buffer3.prototype.inspect = function inspect() {
-      let str = "";
-      const max = exports.INSPECT_MAX_BYTES;
-      str = this.toString("hex", 0, max).replace(/(.{2})/g, "$1 ").trim();
-      if (this.length > max) str += " ... ";
-      return "<Buffer " + str + ">";
-    };
-    if (customInspectSymbol) {
-      Buffer3.prototype[customInspectSymbol] = Buffer3.prototype.inspect;
-    }
-    Buffer3.prototype.compare = function compare(target, start, end, thisStart, thisEnd) {
-      if (isInstance(target, Uint8Array)) {
-        target = Buffer3.from(target, target.offset, target.byteLength);
-      }
-      if (!Buffer3.isBuffer(target)) {
-        throw new TypeError(
-          'The "target" argument must be one of type Buffer or Uint8Array. Received type ' + typeof target
-        );
-      }
-      if (start === void 0) {
-        start = 0;
-      }
-      if (end === void 0) {
-        end = target ? target.length : 0;
-      }
-      if (thisStart === void 0) {
-        thisStart = 0;
-      }
-      if (thisEnd === void 0) {
-        thisEnd = this.length;
-      }
-      if (start < 0 || end > target.length || thisStart < 0 || thisEnd > this.length) {
-        throw new RangeError("out of range index");
-      }
-      if (thisStart >= thisEnd && start >= end) {
-        return 0;
-      }
-      if (thisStart >= thisEnd) {
-        return -1;
-      }
-      if (start >= end) {
-        return 1;
-      }
-      start >>>= 0;
-      end >>>= 0;
-      thisStart >>>= 0;
-      thisEnd >>>= 0;
-      if (this === target) return 0;
-      let x = thisEnd - thisStart;
-      let y = end - start;
-      const len = Math.min(x, y);
-      const thisCopy = this.slice(thisStart, thisEnd);
-      const targetCopy = target.slice(start, end);
-      for (let i = 0; i < len; ++i) {
-        if (thisCopy[i] !== targetCopy[i]) {
-          x = thisCopy[i];
-          y = targetCopy[i];
-          break;
-        }
-      }
-      if (x < y) return -1;
-      if (y < x) return 1;
-      return 0;
-    };
-    function bidirectionalIndexOf(buffer, val, byteOffset, encoding, dir) {
-      if (buffer.length === 0) return -1;
-      if (typeof byteOffset === "string") {
-        encoding = byteOffset;
-        byteOffset = 0;
-      } else if (byteOffset > 2147483647) {
-        byteOffset = 2147483647;
-      } else if (byteOffset < -2147483648) {
-        byteOffset = -2147483648;
-      }
-      byteOffset = +byteOffset;
-      if (numberIsNaN(byteOffset)) {
-        byteOffset = dir ? 0 : buffer.length - 1;
-      }
-      if (byteOffset < 0) byteOffset = buffer.length + byteOffset;
-      if (byteOffset >= buffer.length) {
-        if (dir) return -1;
-        else byteOffset = buffer.length - 1;
-      } else if (byteOffset < 0) {
-        if (dir) byteOffset = 0;
-        else return -1;
-      }
-      if (typeof val === "string") {
-        val = Buffer3.from(val, encoding);
-      }
-      if (Buffer3.isBuffer(val)) {
-        if (val.length === 0) {
-          return -1;
-        }
-        return arrayIndexOf(buffer, val, byteOffset, encoding, dir);
-      } else if (typeof val === "number") {
-        val = val & 255;
-        if (typeof Uint8Array.prototype.indexOf === "function") {
-          if (dir) {
-            return Uint8Array.prototype.indexOf.call(buffer, val, byteOffset);
-          } else {
-            return Uint8Array.prototype.lastIndexOf.call(buffer, val, byteOffset);
-          }
-        }
-        return arrayIndexOf(buffer, [val], byteOffset, encoding, dir);
-      }
-      throw new TypeError("val must be string, number or Buffer");
-    }
-    function arrayIndexOf(arr, val, byteOffset, encoding, dir) {
-      let indexSize = 1;
-      let arrLength = arr.length;
-      let valLength = val.length;
-      if (encoding !== void 0) {
-        encoding = String(encoding).toLowerCase();
-        if (encoding === "ucs2" || encoding === "ucs-2" || encoding === "utf16le" || encoding === "utf-16le") {
-          if (arr.length < 2 || val.length < 2) {
-            return -1;
-          }
-          indexSize = 2;
-          arrLength /= 2;
-          valLength /= 2;
-          byteOffset /= 2;
-        }
-      }
-      function read(buf, i2) {
-        if (indexSize === 1) {
-          return buf[i2];
-        } else {
-          return buf.readUInt16BE(i2 * indexSize);
-        }
-      }
-      let i;
-      if (dir) {
-        let foundIndex = -1;
-        for (i = byteOffset; i < arrLength; i++) {
-          if (read(arr, i) === read(val, foundIndex === -1 ? 0 : i - foundIndex)) {
-            if (foundIndex === -1) foundIndex = i;
-            if (i - foundIndex + 1 === valLength) return foundIndex * indexSize;
-          } else {
-            if (foundIndex !== -1) i -= i - foundIndex;
-            foundIndex = -1;
-          }
-        }
-      } else {
-        if (byteOffset + valLength > arrLength) byteOffset = arrLength - valLength;
-        for (i = byteOffset; i >= 0; i--) {
-          let found = true;
-          for (let j = 0; j < valLength; j++) {
-            if (read(arr, i + j) !== read(val, j)) {
-              found = false;
-              break;
-            }
-          }
-          if (found) return i;
-        }
-      }
-      return -1;
-    }
-    Buffer3.prototype.includes = function includes(val, byteOffset, encoding) {
-      return this.indexOf(val, byteOffset, encoding) !== -1;
-    };
-    Buffer3.prototype.indexOf = function indexOf(val, byteOffset, encoding) {
-      return bidirectionalIndexOf(this, val, byteOffset, encoding, true);
-    };
-    Buffer3.prototype.lastIndexOf = function lastIndexOf(val, byteOffset, encoding) {
-      return bidirectionalIndexOf(this, val, byteOffset, encoding, false);
-    };
-    function hexWrite(buf, string, offset, length) {
-      offset = Number(offset) || 0;
-      const remaining = buf.length - offset;
-      if (!length) {
-        length = remaining;
-      } else {
-        length = Number(length);
-        if (length > remaining) {
-          length = remaining;
-        }
-      }
-      const strLen = string.length;
-      if (length > strLen / 2) {
-        length = strLen / 2;
-      }
-      let i;
-      for (i = 0; i < length; ++i) {
-        const parsed = parseInt(string.substr(i * 2, 2), 16);
-        if (numberIsNaN(parsed)) return i;
-        buf[offset + i] = parsed;
-      }
-      return i;
-    }
-    function utf8Write(buf, string, offset, length) {
-      return blitBuffer(utf8ToBytes(string, buf.length - offset), buf, offset, length);
-    }
-    function asciiWrite(buf, string, offset, length) {
-      return blitBuffer(asciiToBytes(string), buf, offset, length);
-    }
-    function base64Write(buf, string, offset, length) {
-      return blitBuffer(base64ToBytes(string), buf, offset, length);
-    }
-    function ucs2Write(buf, string, offset, length) {
-      return blitBuffer(utf16leToBytes(string, buf.length - offset), buf, offset, length);
-    }
-    Buffer3.prototype.write = function write(string, offset, length, encoding) {
-      if (offset === void 0) {
-        encoding = "utf8";
-        length = this.length;
-        offset = 0;
-      } else if (length === void 0 && typeof offset === "string") {
-        encoding = offset;
-        length = this.length;
-        offset = 0;
-      } else if (isFinite(offset)) {
-        offset = offset >>> 0;
-        if (isFinite(length)) {
-          length = length >>> 0;
-          if (encoding === void 0) encoding = "utf8";
-        } else {
-          encoding = length;
-          length = void 0;
-        }
-      } else {
-        throw new Error(
-          "Buffer.write(string, encoding, offset[, length]) is no longer supported"
-        );
-      }
-      const remaining = this.length - offset;
-      if (length === void 0 || length > remaining) length = remaining;
-      if (string.length > 0 && (length < 0 || offset < 0) || offset > this.length) {
-        throw new RangeError("Attempt to write outside buffer bounds");
-      }
-      if (!encoding) encoding = "utf8";
-      let loweredCase = false;
-      for (; ; ) {
-        switch (encoding) {
-          case "hex":
-            return hexWrite(this, string, offset, length);
-          case "utf8":
-          case "utf-8":
-            return utf8Write(this, string, offset, length);
-          case "ascii":
-          case "latin1":
-          case "binary":
-            return asciiWrite(this, string, offset, length);
-          case "base64":
-            return base64Write(this, string, offset, length);
-          case "ucs2":
-          case "ucs-2":
-          case "utf16le":
-          case "utf-16le":
-            return ucs2Write(this, string, offset, length);
-          default:
-            if (loweredCase) throw new TypeError("Unknown encoding: " + encoding);
-            encoding = ("" + encoding).toLowerCase();
-            loweredCase = true;
-        }
-      }
-    };
-    Buffer3.prototype.toJSON = function toJSON() {
-      return {
-        type: "Buffer",
-        data: Array.prototype.slice.call(this._arr || this, 0)
-      };
-    };
-    function base64Slice(buf, start, end) {
-      if (start === 0 && end === buf.length) {
-        return base64.fromByteArray(buf);
-      } else {
-        return base64.fromByteArray(buf.slice(start, end));
-      }
-    }
-    function utf8Slice(buf, start, end) {
-      end = Math.min(buf.length, end);
-      const res = [];
-      let i = start;
-      while (i < end) {
-        const firstByte = buf[i];
-        let codePoint = null;
-        let bytesPerSequence = firstByte > 239 ? 4 : firstByte > 223 ? 3 : firstByte > 191 ? 2 : 1;
-        if (i + bytesPerSequence <= end) {
-          let secondByte, thirdByte, fourthByte, tempCodePoint;
-          switch (bytesPerSequence) {
-            case 1:
-              if (firstByte < 128) {
-                codePoint = firstByte;
-              }
-              break;
-            case 2:
-              secondByte = buf[i + 1];
-              if ((secondByte & 192) === 128) {
-                tempCodePoint = (firstByte & 31) << 6 | secondByte & 63;
-                if (tempCodePoint > 127) {
-                  codePoint = tempCodePoint;
-                }
-              }
-              break;
-            case 3:
-              secondByte = buf[i + 1];
-              thirdByte = buf[i + 2];
-              if ((secondByte & 192) === 128 && (thirdByte & 192) === 128) {
-                tempCodePoint = (firstByte & 15) << 12 | (secondByte & 63) << 6 | thirdByte & 63;
-                if (tempCodePoint > 2047 && (tempCodePoint < 55296 || tempCodePoint > 57343)) {
-                  codePoint = tempCodePoint;
-                }
-              }
-              break;
-            case 4:
-              secondByte = buf[i + 1];
-              thirdByte = buf[i + 2];
-              fourthByte = buf[i + 3];
-              if ((secondByte & 192) === 128 && (thirdByte & 192) === 128 && (fourthByte & 192) === 128) {
-                tempCodePoint = (firstByte & 15) << 18 | (secondByte & 63) << 12 | (thirdByte & 63) << 6 | fourthByte & 63;
-                if (tempCodePoint > 65535 && tempCodePoint < 1114112) {
-                  codePoint = tempCodePoint;
-                }
-              }
-          }
-        }
-        if (codePoint === null) {
-          codePoint = 65533;
-          bytesPerSequence = 1;
-        } else if (codePoint > 65535) {
-          codePoint -= 65536;
-          res.push(codePoint >>> 10 & 1023 | 55296);
-          codePoint = 56320 | codePoint & 1023;
-        }
-        res.push(codePoint);
-        i += bytesPerSequence;
-      }
-      return decodeCodePointsArray(res);
-    }
-    var MAX_ARGUMENTS_LENGTH = 4096;
-    function decodeCodePointsArray(codePoints) {
-      const len = codePoints.length;
-      if (len <= MAX_ARGUMENTS_LENGTH) {
-        return String.fromCharCode.apply(String, codePoints);
-      }
-      let res = "";
-      let i = 0;
-      while (i < len) {
-        res += String.fromCharCode.apply(
-          String,
-          codePoints.slice(i, i += MAX_ARGUMENTS_LENGTH)
-        );
-      }
-      return res;
-    }
-    function asciiSlice(buf, start, end) {
-      let ret = "";
-      end = Math.min(buf.length, end);
-      for (let i = start; i < end; ++i) {
-        ret += String.fromCharCode(buf[i] & 127);
-      }
-      return ret;
-    }
-    function latin1Slice(buf, start, end) {
-      let ret = "";
-      end = Math.min(buf.length, end);
-      for (let i = start; i < end; ++i) {
-        ret += String.fromCharCode(buf[i]);
-      }
-      return ret;
-    }
-    function hexSlice(buf, start, end) {
-      const len = buf.length;
-      if (!start || start < 0) start = 0;
-      if (!end || end < 0 || end > len) end = len;
-      let out = "";
-      for (let i = start; i < end; ++i) {
-        out += hexSliceLookupTable[buf[i]];
-      }
-      return out;
-    }
-    function utf16leSlice(buf, start, end) {
-      const bytes = buf.slice(start, end);
-      let res = "";
-      for (let i = 0; i < bytes.length - 1; i += 2) {
-        res += String.fromCharCode(bytes[i] + bytes[i + 1] * 256);
-      }
-      return res;
-    }
-    Buffer3.prototype.slice = function slice(start, end) {
-      const len = this.length;
-      start = ~~start;
-      end = end === void 0 ? len : ~~end;
-      if (start < 0) {
-        start += len;
-        if (start < 0) start = 0;
-      } else if (start > len) {
-        start = len;
-      }
-      if (end < 0) {
-        end += len;
-        if (end < 0) end = 0;
-      } else if (end > len) {
-        end = len;
-      }
-      if (end < start) end = start;
-      const newBuf = this.subarray(start, end);
-      Object.setPrototypeOf(newBuf, Buffer3.prototype);
-      return newBuf;
-    };
-    function checkOffset(offset, ext, length) {
-      if (offset % 1 !== 0 || offset < 0) throw new RangeError("offset is not uint");
-      if (offset + ext > length) throw new RangeError("Trying to access beyond buffer length");
-    }
-    Buffer3.prototype.readUintLE = Buffer3.prototype.readUIntLE = function readUIntLE(offset, byteLength2, noAssert) {
-      offset = offset >>> 0;
-      byteLength2 = byteLength2 >>> 0;
-      if (!noAssert) checkOffset(offset, byteLength2, this.length);
-      let val = this[offset];
-      let mul = 1;
-      let i = 0;
-      while (++i < byteLength2 && (mul *= 256)) {
-        val += this[offset + i] * mul;
-      }
-      return val;
-    };
-    Buffer3.prototype.readUintBE = Buffer3.prototype.readUIntBE = function readUIntBE(offset, byteLength2, noAssert) {
-      offset = offset >>> 0;
-      byteLength2 = byteLength2 >>> 0;
-      if (!noAssert) {
-        checkOffset(offset, byteLength2, this.length);
-      }
-      let val = this[offset + --byteLength2];
-      let mul = 1;
-      while (byteLength2 > 0 && (mul *= 256)) {
-        val += this[offset + --byteLength2] * mul;
-      }
-      return val;
-    };
-    Buffer3.prototype.readUint8 = Buffer3.prototype.readUInt8 = function readUInt8(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 1, this.length);
-      return this[offset];
-    };
-    Buffer3.prototype.readUint16LE = Buffer3.prototype.readUInt16LE = function readUInt16LE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 2, this.length);
-      return this[offset] | this[offset + 1] << 8;
-    };
-    Buffer3.prototype.readUint16BE = Buffer3.prototype.readUInt16BE = function readUInt16BE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 2, this.length);
-      return this[offset] << 8 | this[offset + 1];
-    };
-    Buffer3.prototype.readUint32LE = Buffer3.prototype.readUInt32LE = function readUInt32LE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 4, this.length);
-      return (this[offset] | this[offset + 1] << 8 | this[offset + 2] << 16) + this[offset + 3] * 16777216;
-    };
-    Buffer3.prototype.readUint32BE = Buffer3.prototype.readUInt32BE = function readUInt32BE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 4, this.length);
-      return this[offset] * 16777216 + (this[offset + 1] << 16 | this[offset + 2] << 8 | this[offset + 3]);
-    };
-    Buffer3.prototype.readBigUInt64LE = defineBigIntMethod(function readBigUInt64LE(offset) {
-      offset = offset >>> 0;
-      validateNumber(offset, "offset");
-      const first = this[offset];
-      const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
-        boundsError(offset, this.length - 8);
-      }
-      const lo = first + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24;
-      const hi = this[++offset] + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + last * 2 ** 24;
-      return BigInt(lo) + (BigInt(hi) << BigInt(32));
-    });
-    Buffer3.prototype.readBigUInt64BE = defineBigIntMethod(function readBigUInt64BE(offset) {
-      offset = offset >>> 0;
-      validateNumber(offset, "offset");
-      const first = this[offset];
-      const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
-        boundsError(offset, this.length - 8);
-      }
-      const hi = first * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
-      const lo = this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last;
-      return (BigInt(hi) << BigInt(32)) + BigInt(lo);
-    });
-    Buffer3.prototype.readIntLE = function readIntLE(offset, byteLength2, noAssert) {
-      offset = offset >>> 0;
-      byteLength2 = byteLength2 >>> 0;
-      if (!noAssert) checkOffset(offset, byteLength2, this.length);
-      let val = this[offset];
-      let mul = 1;
-      let i = 0;
-      while (++i < byteLength2 && (mul *= 256)) {
-        val += this[offset + i] * mul;
-      }
-      mul *= 128;
-      if (val >= mul) val -= Math.pow(2, 8 * byteLength2);
-      return val;
-    };
-    Buffer3.prototype.readIntBE = function readIntBE(offset, byteLength2, noAssert) {
-      offset = offset >>> 0;
-      byteLength2 = byteLength2 >>> 0;
-      if (!noAssert) checkOffset(offset, byteLength2, this.length);
-      let i = byteLength2;
-      let mul = 1;
-      let val = this[offset + --i];
-      while (i > 0 && (mul *= 256)) {
-        val += this[offset + --i] * mul;
-      }
-      mul *= 128;
-      if (val >= mul) val -= Math.pow(2, 8 * byteLength2);
-      return val;
-    };
-    Buffer3.prototype.readInt8 = function readInt8(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 1, this.length);
-      if (!(this[offset] & 128)) return this[offset];
-      return (255 - this[offset] + 1) * -1;
-    };
-    Buffer3.prototype.readInt16LE = function readInt16LE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 2, this.length);
-      const val = this[offset] | this[offset + 1] << 8;
-      return val & 32768 ? val | 4294901760 : val;
-    };
-    Buffer3.prototype.readInt16BE = function readInt16BE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 2, this.length);
-      const val = this[offset + 1] | this[offset] << 8;
-      return val & 32768 ? val | 4294901760 : val;
-    };
-    Buffer3.prototype.readInt32LE = function readInt32LE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 4, this.length);
-      return this[offset] | this[offset + 1] << 8 | this[offset + 2] << 16 | this[offset + 3] << 24;
-    };
-    Buffer3.prototype.readInt32BE = function readInt32BE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 4, this.length);
-      return this[offset] << 24 | this[offset + 1] << 16 | this[offset + 2] << 8 | this[offset + 3];
-    };
-    Buffer3.prototype.readBigInt64LE = defineBigIntMethod(function readBigInt64LE(offset) {
-      offset = offset >>> 0;
-      validateNumber(offset, "offset");
-      const first = this[offset];
-      const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
-        boundsError(offset, this.length - 8);
-      }
-      const val = this[offset + 4] + this[offset + 5] * 2 ** 8 + this[offset + 6] * 2 ** 16 + (last << 24);
-      return (BigInt(val) << BigInt(32)) + BigInt(first + this[++offset] * 2 ** 8 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 24);
-    });
-    Buffer3.prototype.readBigInt64BE = defineBigIntMethod(function readBigInt64BE(offset) {
-      offset = offset >>> 0;
-      validateNumber(offset, "offset");
-      const first = this[offset];
-      const last = this[offset + 7];
-      if (first === void 0 || last === void 0) {
-        boundsError(offset, this.length - 8);
-      }
-      const val = (first << 24) + // Overflow
-      this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + this[++offset];
-      return (BigInt(val) << BigInt(32)) + BigInt(this[++offset] * 2 ** 24 + this[++offset] * 2 ** 16 + this[++offset] * 2 ** 8 + last);
-    });
-    Buffer3.prototype.readFloatLE = function readFloatLE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 4, this.length);
-      return ieee754.read(this, offset, true, 23, 4);
-    };
-    Buffer3.prototype.readFloatBE = function readFloatBE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 4, this.length);
-      return ieee754.read(this, offset, false, 23, 4);
-    };
-    Buffer3.prototype.readDoubleLE = function readDoubleLE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 8, this.length);
-      return ieee754.read(this, offset, true, 52, 8);
-    };
-    Buffer3.prototype.readDoubleBE = function readDoubleBE(offset, noAssert) {
-      offset = offset >>> 0;
-      if (!noAssert) checkOffset(offset, 8, this.length);
-      return ieee754.read(this, offset, false, 52, 8);
-    };
-    function checkInt(buf, value, offset, ext, max, min) {
-      if (!Buffer3.isBuffer(buf)) throw new TypeError('"buffer" argument must be a Buffer instance');
-      if (value > max || value < min) throw new RangeError('"value" argument is out of bounds');
-      if (offset + ext > buf.length) throw new RangeError("Index out of range");
-    }
-    Buffer3.prototype.writeUintLE = Buffer3.prototype.writeUIntLE = function writeUIntLE(value, offset, byteLength2, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      byteLength2 = byteLength2 >>> 0;
-      if (!noAssert) {
-        const maxBytes = Math.pow(2, 8 * byteLength2) - 1;
-        checkInt(this, value, offset, byteLength2, maxBytes, 0);
-      }
-      let mul = 1;
-      let i = 0;
-      this[offset] = value & 255;
-      while (++i < byteLength2 && (mul *= 256)) {
-        this[offset + i] = value / mul & 255;
-      }
-      return offset + byteLength2;
-    };
-    Buffer3.prototype.writeUintBE = Buffer3.prototype.writeUIntBE = function writeUIntBE(value, offset, byteLength2, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      byteLength2 = byteLength2 >>> 0;
-      if (!noAssert) {
-        const maxBytes = Math.pow(2, 8 * byteLength2) - 1;
-        checkInt(this, value, offset, byteLength2, maxBytes, 0);
-      }
-      let i = byteLength2 - 1;
-      let mul = 1;
-      this[offset + i] = value & 255;
-      while (--i >= 0 && (mul *= 256)) {
-        this[offset + i] = value / mul & 255;
-      }
-      return offset + byteLength2;
-    };
-    Buffer3.prototype.writeUint8 = Buffer3.prototype.writeUInt8 = function writeUInt8(value, offset, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 1, 255, 0);
-      this[offset] = value & 255;
-      return offset + 1;
-    };
-    Buffer3.prototype.writeUint16LE = Buffer3.prototype.writeUInt16LE = function writeUInt16LE(value, offset, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 2, 65535, 0);
-      this[offset] = value & 255;
-      this[offset + 1] = value >>> 8;
-      return offset + 2;
-    };
-    Buffer3.prototype.writeUint16BE = Buffer3.prototype.writeUInt16BE = function writeUInt16BE(value, offset, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 2, 65535, 0);
-      this[offset] = value >>> 8;
-      this[offset + 1] = value & 255;
-      return offset + 2;
-    };
-    Buffer3.prototype.writeUint32LE = Buffer3.prototype.writeUInt32LE = function writeUInt32LE(value, offset, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 4, 4294967295, 0);
-      this[offset + 3] = value >>> 24;
-      this[offset + 2] = value >>> 16;
-      this[offset + 1] = value >>> 8;
-      this[offset] = value & 255;
-      return offset + 4;
-    };
-    Buffer3.prototype.writeUint32BE = Buffer3.prototype.writeUInt32BE = function writeUInt32BE(value, offset, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 4, 4294967295, 0);
-      this[offset] = value >>> 24;
-      this[offset + 1] = value >>> 16;
-      this[offset + 2] = value >>> 8;
-      this[offset + 3] = value & 255;
-      return offset + 4;
-    };
-    function wrtBigUInt64LE(buf, value, offset, min, max) {
-      checkIntBI(value, min, max, buf, offset, 7);
-      let lo = Number(value & BigInt(4294967295));
-      buf[offset++] = lo;
-      lo = lo >> 8;
-      buf[offset++] = lo;
-      lo = lo >> 8;
-      buf[offset++] = lo;
-      lo = lo >> 8;
-      buf[offset++] = lo;
-      let hi = Number(value >> BigInt(32) & BigInt(4294967295));
-      buf[offset++] = hi;
-      hi = hi >> 8;
-      buf[offset++] = hi;
-      hi = hi >> 8;
-      buf[offset++] = hi;
-      hi = hi >> 8;
-      buf[offset++] = hi;
-      return offset;
-    }
-    function wrtBigUInt64BE(buf, value, offset, min, max) {
-      checkIntBI(value, min, max, buf, offset, 7);
-      let lo = Number(value & BigInt(4294967295));
-      buf[offset + 7] = lo;
-      lo = lo >> 8;
-      buf[offset + 6] = lo;
-      lo = lo >> 8;
-      buf[offset + 5] = lo;
-      lo = lo >> 8;
-      buf[offset + 4] = lo;
-      let hi = Number(value >> BigInt(32) & BigInt(4294967295));
-      buf[offset + 3] = hi;
-      hi = hi >> 8;
-      buf[offset + 2] = hi;
-      hi = hi >> 8;
-      buf[offset + 1] = hi;
-      hi = hi >> 8;
-      buf[offset] = hi;
-      return offset + 8;
-    }
-    Buffer3.prototype.writeBigUInt64LE = defineBigIntMethod(function writeBigUInt64LE(value, offset = 0) {
-      return wrtBigUInt64LE(this, value, offset, BigInt(0), BigInt("0xffffffffffffffff"));
-    });
-    Buffer3.prototype.writeBigUInt64BE = defineBigIntMethod(function writeBigUInt64BE(value, offset = 0) {
-      return wrtBigUInt64BE(this, value, offset, BigInt(0), BigInt("0xffffffffffffffff"));
-    });
-    Buffer3.prototype.writeIntLE = function writeIntLE(value, offset, byteLength2, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) {
-        const limit = Math.pow(2, 8 * byteLength2 - 1);
-        checkInt(this, value, offset, byteLength2, limit - 1, -limit);
-      }
-      let i = 0;
-      let mul = 1;
-      let sub = 0;
-      this[offset] = value & 255;
-      while (++i < byteLength2 && (mul *= 256)) {
-        if (value < 0 && sub === 0 && this[offset + i - 1] !== 0) {
-          sub = 1;
-        }
-        this[offset + i] = (value / mul >> 0) - sub & 255;
-      }
-      return offset + byteLength2;
-    };
-    Buffer3.prototype.writeIntBE = function writeIntBE(value, offset, byteLength2, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) {
-        const limit = Math.pow(2, 8 * byteLength2 - 1);
-        checkInt(this, value, offset, byteLength2, limit - 1, -limit);
-      }
-      let i = byteLength2 - 1;
-      let mul = 1;
-      let sub = 0;
-      this[offset + i] = value & 255;
-      while (--i >= 0 && (mul *= 256)) {
-        if (value < 0 && sub === 0 && this[offset + i + 1] !== 0) {
-          sub = 1;
-        }
-        this[offset + i] = (value / mul >> 0) - sub & 255;
-      }
-      return offset + byteLength2;
-    };
-    Buffer3.prototype.writeInt8 = function writeInt8(value, offset, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 1, 127, -128);
-      if (value < 0) value = 255 + value + 1;
-      this[offset] = value & 255;
-      return offset + 1;
-    };
-    Buffer3.prototype.writeInt16LE = function writeInt16LE(value, offset, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 2, 32767, -32768);
-      this[offset] = value & 255;
-      this[offset + 1] = value >>> 8;
-      return offset + 2;
-    };
-    Buffer3.prototype.writeInt16BE = function writeInt16BE(value, offset, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 2, 32767, -32768);
-      this[offset] = value >>> 8;
-      this[offset + 1] = value & 255;
-      return offset + 2;
-    };
-    Buffer3.prototype.writeInt32LE = function writeInt32LE(value, offset, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 4, 2147483647, -2147483648);
-      this[offset] = value & 255;
-      this[offset + 1] = value >>> 8;
-      this[offset + 2] = value >>> 16;
-      this[offset + 3] = value >>> 24;
-      return offset + 4;
-    };
-    Buffer3.prototype.writeInt32BE = function writeInt32BE(value, offset, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) checkInt(this, value, offset, 4, 2147483647, -2147483648);
-      if (value < 0) value = 4294967295 + value + 1;
-      this[offset] = value >>> 24;
-      this[offset + 1] = value >>> 16;
-      this[offset + 2] = value >>> 8;
-      this[offset + 3] = value & 255;
-      return offset + 4;
-    };
-    Buffer3.prototype.writeBigInt64LE = defineBigIntMethod(function writeBigInt64LE(value, offset = 0) {
-      return wrtBigUInt64LE(this, value, offset, -BigInt("0x8000000000000000"), BigInt("0x7fffffffffffffff"));
-    });
-    Buffer3.prototype.writeBigInt64BE = defineBigIntMethod(function writeBigInt64BE(value, offset = 0) {
-      return wrtBigUInt64BE(this, value, offset, -BigInt("0x8000000000000000"), BigInt("0x7fffffffffffffff"));
-    });
-    function checkIEEE754(buf, value, offset, ext, max, min) {
-      if (offset + ext > buf.length) throw new RangeError("Index out of range");
-      if (offset < 0) throw new RangeError("Index out of range");
-    }
-    function writeFloat(buf, value, offset, littleEndian, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) {
-        checkIEEE754(buf, value, offset, 4, 34028234663852886e22, -34028234663852886e22);
-      }
-      ieee754.write(buf, value, offset, littleEndian, 23, 4);
-      return offset + 4;
-    }
-    Buffer3.prototype.writeFloatLE = function writeFloatLE(value, offset, noAssert) {
-      return writeFloat(this, value, offset, true, noAssert);
-    };
-    Buffer3.prototype.writeFloatBE = function writeFloatBE(value, offset, noAssert) {
-      return writeFloat(this, value, offset, false, noAssert);
-    };
-    function writeDouble(buf, value, offset, littleEndian, noAssert) {
-      value = +value;
-      offset = offset >>> 0;
-      if (!noAssert) {
-        checkIEEE754(buf, value, offset, 8, 17976931348623157e292, -17976931348623157e292);
-      }
-      ieee754.write(buf, value, offset, littleEndian, 52, 8);
-      return offset + 8;
-    }
-    Buffer3.prototype.writeDoubleLE = function writeDoubleLE(value, offset, noAssert) {
-      return writeDouble(this, value, offset, true, noAssert);
-    };
-    Buffer3.prototype.writeDoubleBE = function writeDoubleBE(value, offset, noAssert) {
-      return writeDouble(this, value, offset, false, noAssert);
-    };
-    Buffer3.prototype.copy = function copy(target, targetStart, start, end) {
-      if (!Buffer3.isBuffer(target)) throw new TypeError("argument should be a Buffer");
-      if (!start) start = 0;
-      if (!end && end !== 0) end = this.length;
-      if (targetStart >= target.length) targetStart = target.length;
-      if (!targetStart) targetStart = 0;
-      if (end > 0 && end < start) end = start;
-      if (end === start) return 0;
-      if (target.length === 0 || this.length === 0) return 0;
-      if (targetStart < 0) {
-        throw new RangeError("targetStart out of bounds");
-      }
-      if (start < 0 || start >= this.length) throw new RangeError("Index out of range");
-      if (end < 0) throw new RangeError("sourceEnd out of bounds");
-      if (end > this.length) end = this.length;
-      if (target.length - targetStart < end - start) {
-        end = target.length - targetStart + start;
-      }
-      const len = end - start;
-      if (this === target && typeof Uint8Array.prototype.copyWithin === "function") {
-        this.copyWithin(targetStart, start, end);
-      } else {
-        Uint8Array.prototype.set.call(
-          target,
-          this.subarray(start, end),
-          targetStart
-        );
-      }
-      return len;
-    };
-    Buffer3.prototype.fill = function fill(val, start, end, encoding) {
-      if (typeof val === "string") {
-        if (typeof start === "string") {
-          encoding = start;
-          start = 0;
-          end = this.length;
-        } else if (typeof end === "string") {
-          encoding = end;
-          end = this.length;
-        }
-        if (encoding !== void 0 && typeof encoding !== "string") {
-          throw new TypeError("encoding must be a string");
-        }
-        if (typeof encoding === "string" && !Buffer3.isEncoding(encoding)) {
-          throw new TypeError("Unknown encoding: " + encoding);
-        }
-        if (val.length === 1) {
-          const code = val.charCodeAt(0);
-          if (encoding === "utf8" && code < 128 || encoding === "latin1") {
-            val = code;
-          }
-        }
-      } else if (typeof val === "number") {
-        val = val & 255;
-      } else if (typeof val === "boolean") {
-        val = Number(val);
-      }
-      if (start < 0 || this.length < start || this.length < end) {
-        throw new RangeError("Out of range index");
-      }
-      if (end <= start) {
-        return this;
-      }
-      start = start >>> 0;
-      end = end === void 0 ? this.length : end >>> 0;
-      if (!val) val = 0;
-      let i;
-      if (typeof val === "number") {
-        for (i = start; i < end; ++i) {
-          this[i] = val;
-        }
-      } else {
-        const bytes = Buffer3.isBuffer(val) ? val : Buffer3.from(val, encoding);
-        const len = bytes.length;
-        if (len === 0) {
-          throw new TypeError('The value "' + val + '" is invalid for argument "value"');
-        }
-        for (i = 0; i < end - start; ++i) {
-          this[i + start] = bytes[i % len];
-        }
-      }
-      return this;
-    };
-    var errors = {};
-    function E(sym, getMessage, Base) {
-      errors[sym] = class NodeError extends Base {
-        constructor() {
-          super();
-          Object.defineProperty(this, "message", {
-            value: getMessage.apply(this, arguments),
-            writable: true,
-            configurable: true
-          });
-          this.name = `${this.name} [${sym}]`;
-          this.stack;
-          delete this.name;
-        }
-        get code() {
-          return sym;
-        }
-        set code(value) {
-          Object.defineProperty(this, "code", {
-            configurable: true,
-            enumerable: true,
-            value,
-            writable: true
-          });
-        }
-        toString() {
-          return `${this.name} [${sym}]: ${this.message}`;
-        }
-      };
-    }
-    E(
-      "ERR_BUFFER_OUT_OF_BOUNDS",
-      function(name) {
-        if (name) {
-          return `${name} is outside of buffer bounds`;
-        }
-        return "Attempt to access memory outside buffer bounds";
-      },
-      RangeError
-    );
-    E(
-      "ERR_INVALID_ARG_TYPE",
-      function(name, actual) {
-        return `The "${name}" argument must be of type number. Received type ${typeof actual}`;
-      },
-      TypeError
-    );
-    E(
-      "ERR_OUT_OF_RANGE",
-      function(str, range, input) {
-        let msg = `The value of "${str}" is out of range.`;
-        let received = input;
-        if (Number.isInteger(input) && Math.abs(input) > 2 ** 32) {
-          received = addNumericalSeparator(String(input));
-        } else if (typeof input === "bigint") {
-          received = String(input);
-          if (input > BigInt(2) ** BigInt(32) || input < -(BigInt(2) ** BigInt(32))) {
-            received = addNumericalSeparator(received);
-          }
-          received += "n";
-        }
-        msg += ` It must be ${range}. Received ${received}`;
-        return msg;
-      },
-      RangeError
-    );
-    function addNumericalSeparator(val) {
-      let res = "";
-      let i = val.length;
-      const start = val[0] === "-" ? 1 : 0;
-      for (; i >= start + 4; i -= 3) {
-        res = `_${val.slice(i - 3, i)}${res}`;
-      }
-      return `${val.slice(0, i)}${res}`;
-    }
-    function checkBounds(buf, offset, byteLength2) {
-      validateNumber(offset, "offset");
-      if (buf[offset] === void 0 || buf[offset + byteLength2] === void 0) {
-        boundsError(offset, buf.length - (byteLength2 + 1));
-      }
-    }
-    function checkIntBI(value, min, max, buf, offset, byteLength2) {
-      if (value > max || value < min) {
-        const n = typeof min === "bigint" ? "n" : "";
-        let range;
-        if (byteLength2 > 3) {
-          if (min === 0 || min === BigInt(0)) {
-            range = `>= 0${n} and < 2${n} ** ${(byteLength2 + 1) * 8}${n}`;
-          } else {
-            range = `>= -(2${n} ** ${(byteLength2 + 1) * 8 - 1}${n}) and < 2 ** ${(byteLength2 + 1) * 8 - 1}${n}`;
-          }
-        } else {
-          range = `>= ${min}${n} and <= ${max}${n}`;
-        }
-        throw new errors.ERR_OUT_OF_RANGE("value", range, value);
-      }
-      checkBounds(buf, offset, byteLength2);
-    }
-    function validateNumber(value, name) {
-      if (typeof value !== "number") {
-        throw new errors.ERR_INVALID_ARG_TYPE(name, "number", value);
-      }
-    }
-    function boundsError(value, length, type) {
-      if (Math.floor(value) !== value) {
-        validateNumber(value, type);
-        throw new errors.ERR_OUT_OF_RANGE(type || "offset", "an integer", value);
-      }
-      if (length < 0) {
-        throw new errors.ERR_BUFFER_OUT_OF_BOUNDS();
-      }
-      throw new errors.ERR_OUT_OF_RANGE(
-        type || "offset",
-        `>= ${type ? 1 : 0} and <= ${length}`,
-        value
-      );
-    }
-    var INVALID_BASE64_RE = /[^+/0-9A-Za-z-_]/g;
-    function base64clean(str) {
-      str = str.split("=")[0];
-      str = str.trim().replace(INVALID_BASE64_RE, "");
-      if (str.length < 2) return "";
-      while (str.length % 4 !== 0) {
-        str = str + "=";
-      }
-      return str;
-    }
-    function utf8ToBytes(string, units) {
-      units = units || Infinity;
-      let codePoint;
-      const length = string.length;
-      let leadSurrogate = null;
-      const bytes = [];
-      for (let i = 0; i < length; ++i) {
-        codePoint = string.charCodeAt(i);
-        if (codePoint > 55295 && codePoint < 57344) {
-          if (!leadSurrogate) {
-            if (codePoint > 56319) {
-              if ((units -= 3) > -1) bytes.push(239, 191, 189);
-              continue;
-            } else if (i + 1 === length) {
-              if ((units -= 3) > -1) bytes.push(239, 191, 189);
-              continue;
-            }
-            leadSurrogate = codePoint;
-            continue;
-          }
-          if (codePoint < 56320) {
-            if ((units -= 3) > -1) bytes.push(239, 191, 189);
-            leadSurrogate = codePoint;
-            continue;
-          }
-          codePoint = (leadSurrogate - 55296 << 10 | codePoint - 56320) + 65536;
-        } else if (leadSurrogate) {
-          if ((units -= 3) > -1) bytes.push(239, 191, 189);
-        }
-        leadSurrogate = null;
-        if (codePoint < 128) {
-          if ((units -= 1) < 0) break;
-          bytes.push(codePoint);
-        } else if (codePoint < 2048) {
-          if ((units -= 2) < 0) break;
-          bytes.push(
-            codePoint >> 6 | 192,
-            codePoint & 63 | 128
-          );
-        } else if (codePoint < 65536) {
-          if ((units -= 3) < 0) break;
-          bytes.push(
-            codePoint >> 12 | 224,
-            codePoint >> 6 & 63 | 128,
-            codePoint & 63 | 128
-          );
-        } else if (codePoint < 1114112) {
-          if ((units -= 4) < 0) break;
-          bytes.push(
-            codePoint >> 18 | 240,
-            codePoint >> 12 & 63 | 128,
-            codePoint >> 6 & 63 | 128,
-            codePoint & 63 | 128
-          );
-        } else {
-          throw new Error("Invalid code point");
-        }
-      }
-      return bytes;
-    }
-    function asciiToBytes(str) {
-      const byteArray = [];
-      for (let i = 0; i < str.length; ++i) {
-        byteArray.push(str.charCodeAt(i) & 255);
-      }
-      return byteArray;
-    }
-    function utf16leToBytes(str, units) {
-      let c, hi, lo;
-      const byteArray = [];
-      for (let i = 0; i < str.length; ++i) {
-        if ((units -= 2) < 0) break;
-        c = str.charCodeAt(i);
-        hi = c >> 8;
-        lo = c % 256;
-        byteArray.push(lo);
-        byteArray.push(hi);
-      }
-      return byteArray;
-    }
-    function base64ToBytes(str) {
-      return base64.toByteArray(base64clean(str));
-    }
-    function blitBuffer(src, dst, offset, length) {
-      let i;
-      for (i = 0; i < length; ++i) {
-        if (i + offset >= dst.length || i >= src.length) break;
-        dst[i + offset] = src[i];
-      }
-      return i;
-    }
-    function isInstance(obj, type) {
-      return obj instanceof type || obj != null && obj.constructor != null && obj.constructor.name != null && obj.constructor.name === type.name;
-    }
-    function numberIsNaN(obj) {
-      return obj !== obj;
-    }
-    var hexSliceLookupTable = (function() {
-      const alphabet = "0123456789abcdef";
-      const table = new Array(256);
-      for (let i = 0; i < 16; ++i) {
-        const i16 = i * 16;
-        for (let j = 0; j < 16; ++j) {
-          table[i16 + j] = alphabet[i] + alphabet[j];
-        }
-      }
-      return table;
-    })();
-    function defineBigIntMethod(fn) {
-      return typeof BigInt === "undefined" ? BufferBigIntNotDefined : fn;
-    }
-    function BufferBigIntNotDefined() {
-      throw new Error("BigInt not supported");
-    }
-  }
-});
-
-// examples/browser/buffer-shim.js
-var import_buffer;
-var init_buffer_shim = __esm({
-  "examples/browser/buffer-shim.js"() {
-    "use strict";
-    import_buffer = __toESM(require_buffer(), 1);
-  }
-});
-
 // node_modules/@noble/hashes/crypto.js
 var require_crypto = __commonJS({
   "node_modules/@noble/hashes/crypto.js"(exports) {
     "use strict";
-    init_buffer_shim();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.crypto = void 0;
     exports.crypto = typeof globalThis === "object" && "crypto" in globalThis ? globalThis.crypto : void 0;
@@ -1840,7 +55,6 @@ var require_crypto = __commonJS({
 var require_utils = __commonJS({
   "node_modules/@noble/hashes/utils.js"(exports) {
     "use strict";
-    init_buffer_shim();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.wrapXOFConstructorWithOpts = exports.wrapConstructorWithOpts = exports.wrapConstructor = exports.Hash = exports.nextTick = exports.swap32IfBE = exports.byteSwapIfBE = exports.swap8IfBE = exports.isLE = void 0;
     exports.isBytes = isBytes;
@@ -2083,7 +297,6 @@ var require_utils = __commonJS({
 var require_md = __commonJS({
   "node_modules/@noble/hashes/_md.js"(exports) {
     "use strict";
-    init_buffer_shim();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.SHA512_IV = exports.SHA384_IV = exports.SHA224_IV = exports.SHA256_IV = exports.HashMD = void 0;
     exports.setBigUint64 = setBigUint64;
@@ -2262,7 +475,6 @@ var require_md = __commonJS({
 var require_u64 = __commonJS({
   "node_modules/@noble/hashes/_u64.js"(exports) {
     "use strict";
-    init_buffer_shim();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.toBig = exports.shrSL = exports.shrSH = exports.rotrSL = exports.rotrSH = exports.rotrBL = exports.rotrBH = exports.rotr32L = exports.rotr32H = exports.rotlSL = exports.rotlSH = exports.rotlBL = exports.rotlBH = exports.add5L = exports.add5H = exports.add4L = exports.add4H = exports.add3L = exports.add3H = void 0;
     exports.add = add;
@@ -2359,7 +571,6 @@ var require_u64 = __commonJS({
 var require_sha2 = __commonJS({
   "node_modules/@noble/hashes/sha2.js"(exports) {
     "use strict";
-    init_buffer_shim();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.sha512_224 = exports.sha512_256 = exports.sha384 = exports.sha512 = exports.sha224 = exports.sha256 = exports.SHA512_256 = exports.SHA512_224 = exports.SHA384 = exports.SHA512 = exports.SHA224 = exports.SHA256 = void 0;
     var _md_ts_1 = require_md();
@@ -2830,7 +1041,6 @@ var require_sha2 = __commonJS({
 var require_sha256 = __commonJS({
   "node_modules/@noble/hashes/sha256.js"(exports) {
     "use strict";
-    init_buffer_shim();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.sha224 = exports.SHA224 = exports.sha256 = exports.SHA256 = void 0;
     var sha2_ts_1 = require_sha2();
@@ -2845,7 +1055,6 @@ var require_sha256 = __commonJS({
 var require_sha512 = __commonJS({
   "node_modules/@noble/hashes/sha512.js"(exports) {
     "use strict";
-    init_buffer_shim();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.sha512_256 = exports.SHA512_256 = exports.sha512_224 = exports.SHA512_224 = exports.sha384 = exports.SHA384 = exports.sha512 = exports.SHA512 = void 0;
     var sha2_ts_1 = require_sha2();
@@ -2864,7 +1073,6 @@ var require_sha512 = __commonJS({
 var require_hmac = __commonJS({
   "node_modules/@noble/hashes/hmac.js"(exports) {
     "use strict";
-    init_buffer_shim();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.hmac = exports.HMAC = void 0;
     var utils_ts_1 = require_utils();
@@ -2943,7 +1151,6 @@ var require_hmac = __commonJS({
 var require_pbkdf2 = __commonJS({
   "node_modules/@noble/hashes/pbkdf2.js"(exports) {
     "use strict";
-    init_buffer_shim();
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.pbkdf2 = pbkdf2;
     exports.pbkdf2Async = pbkdf2Async;
@@ -3016,8 +1223,8 @@ var require_pbkdf2 = __commonJS({
 
 // node_modules/bip39/src/wordlists/czech.json
 var require_czech = __commonJS({
-  "node_modules/bip39/src/wordlists/czech.json"(exports, module) {
-    module.exports = [
+  "node_modules/bip39/src/wordlists/czech.json"(exports, module2) {
+    module2.exports = [
       "abdikace",
       "abeceda",
       "adresa",
@@ -5072,8 +3279,8 @@ var require_czech = __commonJS({
 
 // node_modules/bip39/src/wordlists/chinese_simplified.json
 var require_chinese_simplified = __commonJS({
-  "node_modules/bip39/src/wordlists/chinese_simplified.json"(exports, module) {
-    module.exports = [
+  "node_modules/bip39/src/wordlists/chinese_simplified.json"(exports, module2) {
+    module2.exports = [
       "\u7684",
       "\u4E00",
       "\u662F",
@@ -7128,8 +5335,8 @@ var require_chinese_simplified = __commonJS({
 
 // node_modules/bip39/src/wordlists/chinese_traditional.json
 var require_chinese_traditional = __commonJS({
-  "node_modules/bip39/src/wordlists/chinese_traditional.json"(exports, module) {
-    module.exports = [
+  "node_modules/bip39/src/wordlists/chinese_traditional.json"(exports, module2) {
+    module2.exports = [
       "\u7684",
       "\u4E00",
       "\u662F",
@@ -9184,8 +7391,8 @@ var require_chinese_traditional = __commonJS({
 
 // node_modules/bip39/src/wordlists/korean.json
 var require_korean = __commonJS({
-  "node_modules/bip39/src/wordlists/korean.json"(exports, module) {
-    module.exports = [
+  "node_modules/bip39/src/wordlists/korean.json"(exports, module2) {
+    module2.exports = [
       "\u1100\u1161\u1100\u1167\u11A8",
       "\u1100\u1161\u1101\u1173\u11B7",
       "\u1100\u1161\u1102\u1161\u11AB",
@@ -11240,8 +9447,8 @@ var require_korean = __commonJS({
 
 // node_modules/bip39/src/wordlists/french.json
 var require_french = __commonJS({
-  "node_modules/bip39/src/wordlists/french.json"(exports, module) {
-    module.exports = [
+  "node_modules/bip39/src/wordlists/french.json"(exports, module2) {
+    module2.exports = [
       "abaisser",
       "abandon",
       "abdiquer",
@@ -13296,8 +11503,8 @@ var require_french = __commonJS({
 
 // node_modules/bip39/src/wordlists/italian.json
 var require_italian = __commonJS({
-  "node_modules/bip39/src/wordlists/italian.json"(exports, module) {
-    module.exports = [
+  "node_modules/bip39/src/wordlists/italian.json"(exports, module2) {
+    module2.exports = [
       "abaco",
       "abbaglio",
       "abbinato",
@@ -15352,8 +13559,8 @@ var require_italian = __commonJS({
 
 // node_modules/bip39/src/wordlists/spanish.json
 var require_spanish = __commonJS({
-  "node_modules/bip39/src/wordlists/spanish.json"(exports, module) {
-    module.exports = [
+  "node_modules/bip39/src/wordlists/spanish.json"(exports, module2) {
+    module2.exports = [
       "a\u0301baco",
       "abdomen",
       "abeja",
@@ -17408,8 +15615,8 @@ var require_spanish = __commonJS({
 
 // node_modules/bip39/src/wordlists/japanese.json
 var require_japanese = __commonJS({
-  "node_modules/bip39/src/wordlists/japanese.json"(exports, module) {
-    module.exports = [
+  "node_modules/bip39/src/wordlists/japanese.json"(exports, module2) {
+    module2.exports = [
       "\u3042\u3044\u3053\u304F\u3057\u3093",
       "\u3042\u3044\u3055\u3064",
       "\u3042\u3044\u305F\u3099",
@@ -19464,8 +17671,8 @@ var require_japanese = __commonJS({
 
 // node_modules/bip39/src/wordlists/portuguese.json
 var require_portuguese = __commonJS({
-  "node_modules/bip39/src/wordlists/portuguese.json"(exports, module) {
-    module.exports = [
+  "node_modules/bip39/src/wordlists/portuguese.json"(exports, module2) {
+    module2.exports = [
       "abacate",
       "abaixo",
       "abalar",
@@ -21520,8 +19727,8 @@ var require_portuguese = __commonJS({
 
 // node_modules/bip39/src/wordlists/english.json
 var require_english = __commonJS({
-  "node_modules/bip39/src/wordlists/english.json"(exports, module) {
-    module.exports = [
+  "node_modules/bip39/src/wordlists/english.json"(exports, module2) {
+    module2.exports = [
       "abandon",
       "ability",
       "able",
@@ -23578,7 +21785,6 @@ var require_english = __commonJS({
 var require_wordlists = __commonJS({
   "node_modules/bip39/src/_wordlists.js"(exports) {
     "use strict";
-    init_buffer_shim();
     Object.defineProperty(exports, "__esModule", { value: true });
     var wordlists = {};
     exports.wordlists = wordlists;
@@ -23643,7 +21849,6 @@ var require_wordlists = __commonJS({
 var require_src = __commonJS({
   "node_modules/bip39/src/index.js"(exports) {
     "use strict";
-    init_buffer_shim();
     Object.defineProperty(exports, "__esModule", { value: true });
     var sha256_1 = require_sha256();
     var sha512_1 = require_sha512();
@@ -23680,22 +21885,22 @@ var require_src = __commonJS({
       return "mnemonic" + (password || "");
     }
     function mnemonicToSeedSync2(mnemonic, password) {
-      const mnemonicBuffer = Uint8Array.from(import_buffer.Buffer.from(normalize(mnemonic), "utf8"));
-      const saltBuffer = Uint8Array.from(import_buffer.Buffer.from(salt(normalize(password)), "utf8"));
+      const mnemonicBuffer = Uint8Array.from(Buffer.from(normalize(mnemonic), "utf8"));
+      const saltBuffer = Uint8Array.from(Buffer.from(salt(normalize(password)), "utf8"));
       const res = pbkdf2_1.pbkdf2(sha512_1.sha512, mnemonicBuffer, saltBuffer, {
         c: 2048,
         dkLen: 64
       });
-      return import_buffer.Buffer.from(res);
+      return Buffer.from(res);
     }
     exports.mnemonicToSeedSync = mnemonicToSeedSync2;
     function mnemonicToSeed(mnemonic, password) {
-      const mnemonicBuffer = Uint8Array.from(import_buffer.Buffer.from(normalize(mnemonic), "utf8"));
-      const saltBuffer = Uint8Array.from(import_buffer.Buffer.from(salt(normalize(password)), "utf8"));
+      const mnemonicBuffer = Uint8Array.from(Buffer.from(normalize(mnemonic), "utf8"));
+      const saltBuffer = Uint8Array.from(Buffer.from(salt(normalize(password)), "utf8"));
       return pbkdf2_1.pbkdf2Async(sha512_1.sha512, mnemonicBuffer, saltBuffer, {
         c: 2048,
         dkLen: 64
-      }).then((res) => import_buffer.Buffer.from(res));
+      }).then((res) => Buffer.from(res));
     }
     exports.mnemonicToSeed = mnemonicToSeed;
     function mnemonicToEntropy(mnemonic, wordlist) {
@@ -23727,7 +21932,7 @@ var require_src = __commonJS({
       if (entropyBytes.length % 4 !== 0) {
         throw new Error(INVALID_ENTROPY);
       }
-      const entropy = import_buffer.Buffer.from(entropyBytes);
+      const entropy = Buffer.from(entropyBytes);
       const newChecksum = deriveChecksumBits(entropy);
       if (newChecksum !== checksumBits) {
         throw new Error(INVALID_CHECKSUM);
@@ -23736,8 +21941,8 @@ var require_src = __commonJS({
     }
     exports.mnemonicToEntropy = mnemonicToEntropy;
     function entropyToMnemonic(entropy, wordlist) {
-      if (!import_buffer.Buffer.isBuffer(entropy)) {
-        entropy = import_buffer.Buffer.from(entropy, "hex");
+      if (!Buffer.isBuffer(entropy)) {
+        entropy = Buffer.from(entropy, "hex");
       }
       wordlist = wordlist || DEFAULT_WORDLIST;
       if (!wordlist) {
@@ -23768,7 +21973,7 @@ var require_src = __commonJS({
       if (strength % 32 !== 0) {
         throw new TypeError(INVALID_ENTROPY);
       }
-      rng = rng || ((size) => import_buffer.Buffer.from(utils_1.randomBytes(size)));
+      rng = rng || ((size) => Buffer.from(utils_1.randomBytes(size)));
       return entropyToMnemonic(rng(strength / 8), wordlist);
     }
     exports.generateMnemonic = generateMnemonic2;
@@ -23807,53 +22012,2059 @@ var require_src = __commonJS({
   }
 });
 
-// index.js
-init_buffer_shim();
-
-// src/wallet-manager-rgb.js
-init_buffer_shim();
-
-// node_modules/@tetherto/wdk-wallet/index.js
-init_buffer_shim();
+// node_modules/@utexo/rgb-lib-wasm/rgb_lib_wasm_bindings.js
+var rgb_lib_wasm_bindings_exports = {};
+__export(rgb_lib_wasm_bindings_exports, {
+  WasmInvoice: () => WasmInvoice,
+  WasmWallet: () => WasmWallet,
+  checkProxyUrl: () => checkProxyUrl,
+  default: () => __wbg_init,
+  generateKeys: () => generateKeys,
+  init: () => init,
+  initSync: () => initSync,
+  restoreKeys: () => restoreKeys,
+  validateConsignmentOffchain: () => validateConsignmentOffchain
+});
+function checkProxyUrl(proxy_url) {
+  const ptr0 = passStringToWasm0(proxy_url, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.checkProxyUrl(ptr0, len0);
+  return ret;
+}
+function generateKeys(network) {
+  const ptr0 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ret = wasm.generateKeys(ptr0, len0);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function init() {
+  wasm.init();
+}
+function restoreKeys(network, mnemonic) {
+  const ptr0 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ptr1 = passStringToWasm0(mnemonic, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len1 = WASM_VECTOR_LEN;
+  const ret = wasm.restoreKeys(ptr0, len0, ptr1, len1);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function validateConsignmentOffchain(consignment_bytes, txid, network) {
+  const ptr0 = passArray8ToWasm0(consignment_bytes, wasm.__wbindgen_malloc);
+  const len0 = WASM_VECTOR_LEN;
+  const ptr1 = passStringToWasm0(txid, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len1 = WASM_VECTOR_LEN;
+  const ptr2 = passStringToWasm0(network, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+  const len2 = WASM_VECTOR_LEN;
+  const ret = wasm.validateConsignmentOffchain(ptr0, len0, ptr1, len1, ptr2, len2);
+  if (ret[2]) {
+    throw takeFromExternrefTable0(ret[1]);
+  }
+  return takeFromExternrefTable0(ret[0]);
+}
+function __wbg_get_imports() {
+  const import0 = {
+    __proto__: null,
+    __wbg_Error_2e59b1b37a9a34c3: function(arg0, arg1) {
+      const ret = Error(getStringFromWasm0(arg0, arg1));
+      return ret;
+    },
+    __wbg_Number_e6ffdb596c888833: function(arg0) {
+      const ret = Number(arg0);
+      return ret;
+    },
+    __wbg_String_8564e559799eccda: function(arg0, arg1) {
+      const ret = String(arg1);
+      const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len1 = WASM_VECTOR_LEN;
+      getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    },
+    __wbg___wbindgen_bigint_get_as_i64_2c5082002e4826e2: function(arg0, arg1) {
+      const v = arg1;
+      const ret = typeof v === "bigint" ? v : void 0;
+      getDataViewMemory0().setBigInt64(arg0 + 8 * 1, isLikeNone(ret) ? BigInt(0) : ret, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, !isLikeNone(ret), true);
+    },
+    __wbg___wbindgen_boolean_get_a86c216575a75c30: function(arg0) {
+      const v = arg0;
+      const ret = typeof v === "boolean" ? v : void 0;
+      return isLikeNone(ret) ? 16777215 : ret ? 1 : 0;
+    },
+    __wbg___wbindgen_debug_string_dd5d2d07ce9e6c57: function(arg0, arg1) {
+      const ret = debugString(arg1);
+      const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len1 = WASM_VECTOR_LEN;
+      getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    },
+    __wbg___wbindgen_in_4bd7a57e54337366: function(arg0, arg1) {
+      const ret = arg0 in arg1;
+      return ret;
+    },
+    __wbg___wbindgen_is_bigint_6c98f7e945dacdde: function(arg0) {
+      const ret = typeof arg0 === "bigint";
+      return ret;
+    },
+    __wbg___wbindgen_is_function_49868bde5eb1e745: function(arg0) {
+      const ret = typeof arg0 === "function";
+      return ret;
+    },
+    __wbg___wbindgen_is_null_344c8750a8525473: function(arg0) {
+      const ret = arg0 === null;
+      return ret;
+    },
+    __wbg___wbindgen_is_object_40c5a80572e8f9d3: function(arg0) {
+      const val = arg0;
+      const ret = typeof val === "object" && val !== null;
+      return ret;
+    },
+    __wbg___wbindgen_is_string_b29b5c5a8065ba1a: function(arg0) {
+      const ret = typeof arg0 === "string";
+      return ret;
+    },
+    __wbg___wbindgen_is_undefined_c0cca72b82b86f4d: function(arg0) {
+      const ret = arg0 === void 0;
+      return ret;
+    },
+    __wbg___wbindgen_jsval_eq_7d430e744a913d26: function(arg0, arg1) {
+      const ret = arg0 === arg1;
+      return ret;
+    },
+    __wbg___wbindgen_jsval_loose_eq_3a72ae764d46d944: function(arg0, arg1) {
+      const ret = arg0 == arg1;
+      return ret;
+    },
+    __wbg___wbindgen_number_get_7579aab02a8a620c: function(arg0, arg1) {
+      const obj = arg1;
+      const ret = typeof obj === "number" ? obj : void 0;
+      getDataViewMemory0().setFloat64(arg0 + 8 * 1, isLikeNone(ret) ? 0 : ret, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, !isLikeNone(ret), true);
+    },
+    __wbg___wbindgen_string_get_914df97fcfa788f2: function(arg0, arg1) {
+      const obj = arg1;
+      const ret = typeof obj === "string" ? obj : void 0;
+      var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      var len1 = WASM_VECTOR_LEN;
+      getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    },
+    __wbg___wbindgen_throw_81fc77679af83bc6: function(arg0, arg1) {
+      throw new Error(getStringFromWasm0(arg0, arg1));
+    },
+    __wbg__wbg_cb_unref_3c3b4f651835fbcb: function(arg0) {
+      arg0._wbg_cb_unref();
+    },
+    __wbg_abort_5ee4083ce26e0b01: function(arg0) {
+      arg0.abort();
+    },
+    __wbg_abort_7a67cb8f9383baa1: function(arg0, arg1) {
+      arg0.abort(arg1);
+    },
+    __wbg_append_4aa39f0c1ef8161e: function() {
+      return handleError(function(arg0, arg1, arg2, arg3, arg4) {
+        arg0.append(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+      }, arguments);
+    },
+    __wbg_append_59da1e75d76c3126: function() {
+      return handleError(function(arg0, arg1, arg2, arg3, arg4, arg5) {
+        arg0.append(getStringFromWasm0(arg1, arg2), arg3, getStringFromWasm0(arg4, arg5));
+      }, arguments);
+    },
+    __wbg_append_c015600138ae60bb: function() {
+      return handleError(function(arg0, arg1, arg2, arg3, arg4) {
+        arg0.append(getStringFromWasm0(arg1, arg2), getStringFromWasm0(arg3, arg4));
+      }, arguments);
+    },
+    __wbg_arrayBuffer_dae084a298aa5fe0: function() {
+      return handleError(function(arg0) {
+        const ret = arg0.arrayBuffer();
+        return ret;
+      }, arguments);
+    },
+    __wbg_call_7f2987183bb62793: function() {
+      return handleError(function(arg0, arg1) {
+        const ret = arg0.call(arg1);
+        return ret;
+      }, arguments);
+    },
+    __wbg_call_d578befcc3145dee: function() {
+      return handleError(function(arg0, arg1, arg2) {
+        const ret = arg0.call(arg1, arg2);
+        return ret;
+      }, arguments);
+    },
+    __wbg_clearTimeout_2256f1e7b94ef517: function(arg0) {
+      const ret = clearTimeout(arg0);
+      return ret;
+    },
+    __wbg_clearTimeout_6b8d9a38b9263d65: function(arg0) {
+      const ret = clearTimeout(arg0);
+      return ret;
+    },
+    __wbg_close_040c0e5be6c74f11: function(arg0) {
+      arg0.close();
+    },
+    __wbg_createIndex_3b7d978a2177a0cf: function() {
+      return handleError(function(arg0, arg1, arg2, arg3, arg4) {
+        const ret = arg0.createIndex(getStringFromWasm0(arg1, arg2), arg3, arg4);
+        return ret;
+      }, arguments);
+    },
+    __wbg_createObjectStore_6e567b25160be2fa: function() {
+      return handleError(function(arg0, arg1, arg2, arg3) {
+        const ret = arg0.createObjectStore(getStringFromWasm0(arg1, arg2), arg3);
+        return ret;
+      }, arguments);
+    },
+    __wbg_crypto_38df2bab126b63dc: function(arg0) {
+      const ret = arg0.crypto;
+      return ret;
+    },
+    __wbg_deleteIndex_af52038711dd78b2: function() {
+      return handleError(function(arg0, arg1, arg2) {
+        arg0.deleteIndex(getStringFromWasm0(arg1, arg2));
+      }, arguments);
+    },
+    __wbg_deleteObjectStore_42c1e82fe6d8a028: function() {
+      return handleError(function(arg0, arg1, arg2) {
+        arg0.deleteObjectStore(getStringFromWasm0(arg1, arg2));
+      }, arguments);
+    },
+    __wbg_done_547d467e97529006: function(arg0) {
+      const ret = arg0.done;
+      return ret;
+    },
+    __wbg_entries_616b1a459b85be0b: function(arg0) {
+      const ret = Object.entries(arg0);
+      return ret;
+    },
+    __wbg_entries_69f235654ec4ccc6: function(arg0) {
+      const ret = arg0.entries();
+      return ret;
+    },
+    __wbg_error_38bec0a78dd8ded8: function(arg0) {
+      console.error(arg0);
+    },
+    __wbg_error_58469b8474e13592: function() {
+      return handleError(function(arg0) {
+        const ret = arg0.error;
+        return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+      }, arguments);
+    },
+    __wbg_error_ad2c52bad651cd14: function(arg0, arg1) {
+      console.error(getStringFromWasm0(arg0, arg1));
+    },
+    __wbg_error_c57846662bf0e748: function(arg0) {
+      const ret = arg0.error;
+      return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    },
+    __wbg_fetch_1a731e18c5e21884: function(arg0, arg1) {
+      const ret = arg0.fetch(arg1);
+      return ret;
+    },
+    __wbg_fetch_43b2f110608a59ff: function(arg0) {
+      const ret = fetch(arg0);
+      return ret;
+    },
+    __wbg_fetch_8d9b732df7467c44: function(arg0) {
+      const ret = fetch(arg0);
+      return ret;
+    },
+    __wbg_fetch_9dad4fe911207b37: function(arg0) {
+      const ret = fetch(arg0);
+      return ret;
+    },
+    __wbg_getRandomValues_3f44b700395062e5: function() {
+      return handleError(function(arg0, arg1) {
+        globalThis.crypto.getRandomValues(getArrayU8FromWasm0(arg0, arg1));
+      }, arguments);
+    },
+    __wbg_getRandomValues_c44a50d8cfdaebeb: function() {
+      return handleError(function(arg0, arg1) {
+        arg0.getRandomValues(arg1);
+      }, arguments);
+    },
+    __wbg_getTime_f6ac312467f7cf09: function(arg0) {
+      const ret = arg0.getTime();
+      return ret;
+    },
+    __wbg_get_4848e350b40afc16: function(arg0, arg1) {
+      const ret = arg0[arg1 >>> 0];
+      return ret;
+    },
+    __wbg_get_560cb483e5c0133e: function() {
+      return handleError(function(arg0, arg1) {
+        const ret = arg0.get(arg1);
+        return ret;
+      }, arguments);
+    },
+    __wbg_get_dba5fa38b6597b3f: function(arg0, arg1, arg2) {
+      const ret = arg1[arg2 >>> 0];
+      var ptr1 = isLikeNone(ret) ? 0 : passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      var len1 = WASM_VECTOR_LEN;
+      getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    },
+    __wbg_get_ed0642c4b9d31ddf: function() {
+      return handleError(function(arg0, arg1) {
+        const ret = Reflect.get(arg0, arg1);
+        return ret;
+      }, arguments);
+    },
+    __wbg_get_f96702c6245e4ef9: function() {
+      return handleError(function(arg0, arg1) {
+        const ret = Reflect.get(arg0, arg1);
+        return ret;
+      }, arguments);
+    },
+    __wbg_get_unchecked_7d7babe32e9e6a54: function(arg0, arg1) {
+      const ret = arg0[arg1 >>> 0];
+      return ret;
+    },
+    __wbg_get_with_ref_key_6412cf3094599694: function(arg0, arg1) {
+      const ret = arg0[arg1];
+      return ret;
+    },
+    __wbg_has_3ec5c22db2e5237a: function() {
+      return handleError(function(arg0, arg1) {
+        const ret = Reflect.has(arg0, arg1);
+        return ret;
+      }, arguments);
+    },
+    __wbg_headers_e08dcb5aa09b9a63: function(arg0) {
+      const ret = arg0.headers;
+      return ret;
+    },
+    __wbg_indexNames_82c4167bffa4c333: function(arg0) {
+      const ret = arg0.indexNames;
+      return ret;
+    },
+    __wbg_index_ce5a38731ba42f0d: function() {
+      return handleError(function(arg0, arg1, arg2) {
+        const ret = arg0.index(getStringFromWasm0(arg1, arg2));
+        return ret;
+      }, arguments);
+    },
+    __wbg_instanceof_ArrayBuffer_ff7c1337a5e3b33a: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof ArrayBuffer;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_instanceof_Error_e3390d6805733dad: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof Error;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_instanceof_IdbDatabase_0af111edb4be95f4: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof IDBDatabase;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_instanceof_IdbFactory_7c303c3d8528cef3: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof IDBFactory;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_instanceof_IdbOpenDbRequest_92df356941adf31e: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof IDBOpenDBRequest;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_instanceof_IdbRequest_fc5918c726448f04: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof IDBRequest;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_instanceof_IdbTransaction_de69712ce07dde97: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof IDBTransaction;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_instanceof_Map_a10a2795ef4bfe97: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof Map;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_instanceof_Response_06795eab66cc4036: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof Response;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_instanceof_Uint8Array_4b8da683deb25d72: function(arg0) {
+      let result;
+      try {
+        result = arg0 instanceof Uint8Array;
+      } catch (_) {
+        result = false;
+      }
+      const ret = result;
+      return ret;
+    },
+    __wbg_isArray_db61795ad004c139: function(arg0) {
+      const ret = Array.isArray(arg0);
+      return ret;
+    },
+    __wbg_isSafeInteger_ea83862ba994770c: function(arg0) {
+      const ret = Number.isSafeInteger(arg0);
+      return ret;
+    },
+    __wbg_iterator_de403ef31815a3e6: function() {
+      const ret = Symbol.iterator;
+      return ret;
+    },
+    __wbg_keyPath_137bba25d08d22b9: function() {
+      return handleError(function(arg0) {
+        const ret = arg0.keyPath;
+        return ret;
+      }, arguments);
+    },
+    __wbg_length_0c32cb8543c8e4c8: function(arg0) {
+      const ret = arg0.length;
+      return ret;
+    },
+    __wbg_length_3804262ff442a7a3: function(arg0) {
+      const ret = arg0.length;
+      return ret;
+    },
+    __wbg_length_6e821edde497a532: function(arg0) {
+      const ret = arg0.length;
+      return ret;
+    },
+    __wbg_message_7367f8c7d0fa1589: function(arg0) {
+      const ret = arg0.message;
+      return ret;
+    },
+    __wbg_msCrypto_bd5a034af96bcba6: function(arg0) {
+      const ret = arg0.msCrypto;
+      return ret;
+    },
+    __wbg_multiEntry_9d4ec9fa9fa5a9d5: function(arg0) {
+      const ret = arg0.multiEntry;
+      return ret;
+    },
+    __wbg_name_cb583806cac84fe0: function(arg0) {
+      const ret = arg0.name;
+      return ret;
+    },
+    __wbg_new_0_bfa2ef4bc447daa2: function() {
+      const ret = /* @__PURE__ */ new Date();
+      return ret;
+    },
+    __wbg_new_0fec9fb02d03a383: function() {
+      return handleError(function(arg0, arg1) {
+        const ret = new URL(getStringFromWasm0(arg0, arg1));
+        return ret;
+      }, arguments);
+    },
+    __wbg_new_3a112826a89cb962: function() {
+      return handleError(function() {
+        const ret = new Headers();
+        return ret;
+      }, arguments);
+    },
+    __wbg_new_4f9fafbb3909af72: function() {
+      const ret = new Object();
+      return ret;
+    },
+    __wbg_new_56a7f7f78a9437aa: function() {
+      return handleError(function() {
+        const ret = new FormData();
+        return ret;
+      }, arguments);
+    },
+    __wbg_new_7681c4155808e30a: function() {
+      return handleError(function() {
+        const ret = new URLSearchParams();
+        return ret;
+      }, arguments);
+    },
+    __wbg_new_99cabae501c0a8a0: function() {
+      const ret = /* @__PURE__ */ new Map();
+      return ret;
+    },
+    __wbg_new_9abbf7148481485e: function() {
+      return handleError(function() {
+        const ret = new AbortController();
+        return ret;
+      }, arguments);
+    },
+    __wbg_new_a560378ea1240b14: function(arg0) {
+      const ret = new Uint8Array(arg0);
+      return ret;
+    },
+    __wbg_new_f3c9df4f38f3f798: function() {
+      const ret = new Array();
+      return ret;
+    },
+    __wbg_new_from_slice_2580ff33d0d10520: function(arg0, arg1) {
+      const ret = new Uint8Array(getArrayU8FromWasm0(arg0, arg1));
+      return ret;
+    },
+    __wbg_new_typed_14d7cc391ce53d2c: function(arg0, arg1) {
+      try {
+        var state0 = { a: arg0, b: arg1 };
+        var cb0 = (arg02, arg12) => {
+          const a = state0.a;
+          state0.a = 0;
+          try {
+            return wasm_bindgen__convert__closures_____invoke__ha2bf463ed4ed0af5(a, state0.b, arg02, arg12);
+          } finally {
+            state0.a = a;
+          }
+        };
+        const ret = new Promise(cb0);
+        return ret;
+      } finally {
+        state0.a = 0;
+      }
+    },
+    __wbg_new_with_length_9cedd08484b73942: function(arg0) {
+      const ret = new Uint8Array(arg0 >>> 0);
+      return ret;
+    },
+    __wbg_new_with_str_9dca18ad543fe832: function() {
+      return handleError(function(arg0, arg1) {
+        const ret = new Request(getStringFromWasm0(arg0, arg1));
+        return ret;
+      }, arguments);
+    },
+    __wbg_new_with_str_and_init_f663b6d334baa878: function() {
+      return handleError(function(arg0, arg1, arg2) {
+        const ret = new Request(getStringFromWasm0(arg0, arg1), arg2);
+        return ret;
+      }, arguments);
+    },
+    __wbg_new_with_u8_array_sequence_2ae9f5628c4df63c: function() {
+      return handleError(function(arg0) {
+        const ret = new Blob(arg0);
+        return ret;
+      }, arguments);
+    },
+    __wbg_next_01132ed6134b8ef5: function(arg0) {
+      const ret = arg0.next;
+      return ret;
+    },
+    __wbg_next_b3713ec761a9dbfd: function() {
+      return handleError(function(arg0) {
+        const ret = arg0.next();
+        return ret;
+      }, arguments);
+    },
+    __wbg_node_84ea875411254db1: function(arg0) {
+      const ret = arg0.node;
+      return ret;
+    },
+    __wbg_now_2c44418ca0623664: function(arg0) {
+      const ret = arg0.now();
+      return ret;
+    },
+    __wbg_now_88621c9c9a4f3ffc: function() {
+      const ret = Date.now();
+      return ret;
+    },
+    __wbg_objectStoreNames_990d8e55c661828b: function(arg0) {
+      const ret = arg0.objectStoreNames;
+      return ret;
+    },
+    __wbg_objectStore_3d4cade4416cd432: function() {
+      return handleError(function(arg0, arg1, arg2) {
+        const ret = arg0.objectStore(getStringFromWasm0(arg1, arg2));
+        return ret;
+      }, arguments);
+    },
+    __wbg_open_254d9b392262d9ef: function() {
+      return handleError(function(arg0, arg1, arg2) {
+        const ret = arg0.open(getStringFromWasm0(arg1, arg2));
+        return ret;
+      }, arguments);
+    },
+    __wbg_open_ac04ec9d75d0eeaf: function() {
+      return handleError(function(arg0, arg1, arg2, arg3) {
+        const ret = arg0.open(getStringFromWasm0(arg1, arg2), arg3 >>> 0);
+        return ret;
+      }, arguments);
+    },
+    __wbg_process_44c7a14e11e9f69e: function(arg0) {
+      const ret = arg0.process;
+      return ret;
+    },
+    __wbg_prototypesetcall_3e05eb9545565046: function(arg0, arg1, arg2) {
+      Uint8Array.prototype.set.call(getArrayU8FromWasm0(arg0, arg1), arg2);
+    },
+    __wbg_push_6bdbc990be5ac37b: function(arg0, arg1) {
+      const ret = arg0.push(arg1);
+      return ret;
+    },
+    __wbg_put_015a7e88e46a2502: function() {
+      return handleError(function(arg0, arg1) {
+        const ret = arg0.put(arg1);
+        return ret;
+      }, arguments);
+    },
+    __wbg_put_4485a4012273f7ef: function() {
+      return handleError(function(arg0, arg1, arg2) {
+        const ret = arg0.put(arg1, arg2);
+        return ret;
+      }, arguments);
+    },
+    __wbg_queueMicrotask_abaf92f0bd4e80a4: function(arg0) {
+      const ret = arg0.queueMicrotask;
+      return ret;
+    },
+    __wbg_queueMicrotask_df5a6dac26d818f3: function(arg0) {
+      queueMicrotask(arg0);
+    },
+    __wbg_randomFillSync_6c25eac9869eb53c: function() {
+      return handleError(function(arg0, arg1) {
+        arg0.randomFillSync(arg1);
+      }, arguments);
+    },
+    __wbg_require_b4edbdcf3e2a1ef0: function() {
+      return handleError(function() {
+        const ret = module.require;
+        return ret;
+      }, arguments);
+    },
+    __wbg_resolve_0a79de24e9d2267b: function(arg0) {
+      const ret = Promise.resolve(arg0);
+      return ret;
+    },
+    __wbg_result_452c1006fc727317: function() {
+      return handleError(function(arg0) {
+        const ret = arg0.result;
+        return ret;
+      }, arguments);
+    },
+    __wbg_search_bd3fc2fcfcfc32a2: function(arg0, arg1) {
+      const ret = arg1.search;
+      const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len1 = WASM_VECTOR_LEN;
+      getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    },
+    __wbg_setTimeout_b188b3bcc8977c7d: function(arg0, arg1) {
+      const ret = setTimeout(arg0, arg1);
+      return ret;
+    },
+    __wbg_setTimeout_f757f00851f76c42: function(arg0, arg1) {
+      const ret = setTimeout(arg0, arg1);
+      return ret;
+    },
+    __wbg_set_08463b1df38a7e29: function(arg0, arg1, arg2) {
+      const ret = arg0.set(arg1, arg2);
+      return ret;
+    },
+    __wbg_set_6be42768c690e380: function(arg0, arg1, arg2) {
+      arg0[arg1] = arg2;
+    },
+    __wbg_set_6c60b2e8ad0e9383: function(arg0, arg1, arg2) {
+      arg0[arg1 >>> 0] = arg2;
+    },
+    __wbg_set_auto_increment_37227907cc70bd30: function(arg0, arg1) {
+      arg0.autoIncrement = arg1 !== 0;
+    },
+    __wbg_set_body_a304d09cb50cefbe: function(arg0, arg1) {
+      arg0.body = arg1;
+    },
+    __wbg_set_cache_cc687e2b96e9608c: function(arg0, arg1) {
+      arg0.cache = __wbindgen_enum_RequestCache[arg1];
+    },
+    __wbg_set_credentials_7693e63055f5e838: function(arg0, arg1) {
+      arg0.credentials = __wbindgen_enum_RequestCredentials[arg1];
+    },
+    __wbg_set_headers_6ab1105e542834e2: function(arg0, arg1) {
+      arg0.headers = arg1;
+    },
+    __wbg_set_key_path_6edd6ee0e8d75af3: function(arg0, arg1) {
+      arg0.keyPath = arg1;
+    },
+    __wbg_set_method_1971272fe557e972: function(arg0, arg1, arg2) {
+      arg0.method = getStringFromWasm0(arg1, arg2);
+    },
+    __wbg_set_mode_d1b643087602281a: function(arg0, arg1) {
+      arg0.mode = __wbindgen_enum_RequestMode[arg1];
+    },
+    __wbg_set_multi_entry_791aace5b9c7b692: function(arg0, arg1) {
+      arg0.multiEntry = arg1 !== 0;
+    },
+    __wbg_set_name_87619993a0cec565: function(arg0, arg1, arg2) {
+      arg0.name = getStringFromWasm0(arg1, arg2);
+    },
+    __wbg_set_onabort_6b6df7a41aa97c23: function(arg0, arg1) {
+      arg0.onabort = arg1;
+    },
+    __wbg_set_oncomplete_20fb27150b4ee0d4: function(arg0, arg1) {
+      arg0.oncomplete = arg1;
+    },
+    __wbg_set_onerror_2b7dfa4e6dea4159: function(arg0, arg1) {
+      arg0.onerror = arg1;
+    },
+    __wbg_set_onerror_3c4b5087146b11b6: function(arg0, arg1) {
+      arg0.onerror = arg1;
+    },
+    __wbg_set_onsuccess_f7e5b5cbed5008b1: function(arg0, arg1) {
+      arg0.onsuccess = arg1;
+    },
+    __wbg_set_onupgradeneeded_d7e8e03a1999bf5d: function(arg0, arg1) {
+      arg0.onupgradeneeded = arg1;
+    },
+    __wbg_set_onversionchange_f7822a34e73e2769: function(arg0, arg1) {
+      arg0.onversionchange = arg1;
+    },
+    __wbg_set_search_527da9642b10495d: function(arg0, arg1, arg2) {
+      arg0.search = getStringFromWasm0(arg1, arg2);
+    },
+    __wbg_set_signal_8564a226c5c6853c: function(arg0, arg1) {
+      arg0.signal = arg1;
+    },
+    __wbg_set_unique_e8b9acd5c7c23d7a: function(arg0, arg1) {
+      arg0.unique = arg1 !== 0;
+    },
+    __wbg_signal_9172c3282bfba2f5: function(arg0) {
+      const ret = arg0.signal;
+      return ret;
+    },
+    __wbg_static_accessor_GLOBAL_THIS_a1248013d790bf5f: function() {
+      const ret = typeof globalThis === "undefined" ? null : globalThis;
+      return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    },
+    __wbg_static_accessor_GLOBAL_f2e0f995a21329ff: function() {
+      const ret = typeof global === "undefined" ? null : global;
+      return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    },
+    __wbg_static_accessor_SELF_24f78b6d23f286ea: function() {
+      const ret = typeof self === "undefined" ? null : self;
+      return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    },
+    __wbg_static_accessor_WINDOW_59fd959c540fe405: function() {
+      const ret = typeof window === "undefined" ? null : window;
+      return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    },
+    __wbg_status_44ecb0ac1da253f4: function(arg0) {
+      const ret = arg0.status;
+      return ret;
+    },
+    __wbg_stringify_a2c39d991e1bf91d: function() {
+      return handleError(function(arg0) {
+        const ret = JSON.stringify(arg0);
+        return ret;
+      }, arguments);
+    },
+    __wbg_subarray_0f98d3fb634508ad: function(arg0, arg1, arg2) {
+      const ret = arg0.subarray(arg1 >>> 0, arg2 >>> 0);
+      return ret;
+    },
+    __wbg_target_732d56b173b7e87c: function(arg0) {
+      const ret = arg0.target;
+      return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    },
+    __wbg_text_43bdfba45e602cf9: function() {
+      return handleError(function(arg0) {
+        const ret = arg0.text();
+        return ret;
+      }, arguments);
+    },
+    __wbg_then_00eed3ac0b8e82cb: function(arg0, arg1, arg2) {
+      const ret = arg0.then(arg1, arg2);
+      return ret;
+    },
+    __wbg_then_a0c8db0381c8994c: function(arg0, arg1) {
+      const ret = arg0.then(arg1);
+      return ret;
+    },
+    __wbg_toString_6bb93e4c281b55a5: function(arg0) {
+      const ret = arg0.toString();
+      return ret;
+    },
+    __wbg_toString_891d991e862e1d44: function(arg0) {
+      const ret = arg0.toString();
+      return ret;
+    },
+    __wbg_transaction_904b9a3920efb0b5: function() {
+      return handleError(function(arg0, arg1, arg2) {
+        const ret = arg0.transaction(arg1, __wbindgen_enum_IdbTransactionMode[arg2]);
+        return ret;
+      }, arguments);
+    },
+    __wbg_transaction_9c41d998bb80d12a: function(arg0) {
+      const ret = arg0.transaction;
+      return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
+    },
+    __wbg_unique_ae0d9cc0f38a6784: function(arg0) {
+      const ret = arg0.unique;
+      return ret;
+    },
+    __wbg_url_95d8a83d33709572: function(arg0, arg1) {
+      const ret = arg1.url;
+      const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len1 = WASM_VECTOR_LEN;
+      getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    },
+    __wbg_url_fa6a0c3c3dd41ac6: function(arg0, arg1) {
+      const ret = arg1.url;
+      const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+      const len1 = WASM_VECTOR_LEN;
+      getDataViewMemory0().setInt32(arg0 + 4 * 1, len1, true);
+      getDataViewMemory0().setInt32(arg0 + 4 * 0, ptr1, true);
+    },
+    __wbg_value_7f6052747ccf940f: function(arg0) {
+      const ret = arg0.value;
+      return ret;
+    },
+    __wbg_versions_276b2795b1c6a219: function(arg0) {
+      const ret = arg0.versions;
+      return ret;
+    },
+    __wbg_wasmwallet_new: function(arg0) {
+      const ret = WasmWallet.__wrap(arg0);
+      return ret;
+    },
+    __wbindgen_cast_0000000000000001: function(arg0, arg1) {
+      const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hf88681ae9b4e1a18);
+      return ret;
+    },
+    __wbindgen_cast_0000000000000002: function(arg0, arg1) {
+      const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h7223e63f08e0ef48);
+      return ret;
+    },
+    __wbindgen_cast_0000000000000003: function(arg0, arg1) {
+      const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h4a7386c88bbd181c);
+      return ret;
+    },
+    __wbindgen_cast_0000000000000004: function(arg0, arg1) {
+      const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__h3e36e4d4648c49de);
+      return ret;
+    },
+    __wbindgen_cast_0000000000000005: function(arg0, arg1) {
+      const ret = makeMutClosure(arg0, arg1, wasm_bindgen__convert__closures_____invoke__hdcfa8eb8ea27aba6);
+      return ret;
+    },
+    __wbindgen_cast_0000000000000006: function(arg0) {
+      const ret = arg0;
+      return ret;
+    },
+    __wbindgen_cast_0000000000000007: function(arg0) {
+      const ret = arg0;
+      return ret;
+    },
+    __wbindgen_cast_0000000000000008: function(arg0, arg1) {
+      const ret = getArrayU8FromWasm0(arg0, arg1);
+      return ret;
+    },
+    __wbindgen_cast_0000000000000009: function(arg0, arg1) {
+      const ret = getStringFromWasm0(arg0, arg1);
+      return ret;
+    },
+    __wbindgen_cast_000000000000000a: function(arg0) {
+      const ret = BigInt.asUintN(64, arg0);
+      return ret;
+    },
+    __wbindgen_init_externref_table: function() {
+      const table = wasm.__wbindgen_externrefs;
+      const offset = table.grow(4);
+      table.set(0, void 0);
+      table.set(offset + 0, void 0);
+      table.set(offset + 1, null);
+      table.set(offset + 2, true);
+      table.set(offset + 3, false);
+    }
+  };
+  return {
+    __proto__: null,
+    "./rgb_lib_wasm_bindings_bg.js": import0
+  };
+}
+function wasm_bindgen__convert__closures_____invoke__h3e36e4d4648c49de(arg0, arg1) {
+  wasm.wasm_bindgen__convert__closures_____invoke__h3e36e4d4648c49de(arg0, arg1);
+}
+function wasm_bindgen__convert__closures_____invoke__hdcfa8eb8ea27aba6(arg0, arg1) {
+  wasm.wasm_bindgen__convert__closures_____invoke__hdcfa8eb8ea27aba6(arg0, arg1);
+}
+function wasm_bindgen__convert__closures_____invoke__h7223e63f08e0ef48(arg0, arg1, arg2) {
+  wasm.wasm_bindgen__convert__closures_____invoke__h7223e63f08e0ef48(arg0, arg1, arg2);
+}
+function wasm_bindgen__convert__closures_____invoke__h4a7386c88bbd181c(arg0, arg1, arg2) {
+  wasm.wasm_bindgen__convert__closures_____invoke__h4a7386c88bbd181c(arg0, arg1, arg2);
+}
+function wasm_bindgen__convert__closures_____invoke__hf88681ae9b4e1a18(arg0, arg1, arg2) {
+  const ret = wasm.wasm_bindgen__convert__closures_____invoke__hf88681ae9b4e1a18(arg0, arg1, arg2);
+  if (ret[1]) {
+    throw takeFromExternrefTable0(ret[0]);
+  }
+}
+function wasm_bindgen__convert__closures_____invoke__ha2bf463ed4ed0af5(arg0, arg1, arg2, arg3) {
+  wasm.wasm_bindgen__convert__closures_____invoke__ha2bf463ed4ed0af5(arg0, arg1, arg2, arg3);
+}
+function addToExternrefTable0(obj) {
+  const idx = wasm.__externref_table_alloc();
+  wasm.__wbindgen_externrefs.set(idx, obj);
+  return idx;
+}
+function debugString(val) {
+  const type = typeof val;
+  if (type == "number" || type == "boolean" || val == null) {
+    return `${val}`;
+  }
+  if (type == "string") {
+    return `"${val}"`;
+  }
+  if (type == "symbol") {
+    const description = val.description;
+    if (description == null) {
+      return "Symbol";
+    } else {
+      return `Symbol(${description})`;
+    }
+  }
+  if (type == "function") {
+    const name = val.name;
+    if (typeof name == "string" && name.length > 0) {
+      return `Function(${name})`;
+    } else {
+      return "Function";
+    }
+  }
+  if (Array.isArray(val)) {
+    const length = val.length;
+    let debug = "[";
+    if (length > 0) {
+      debug += debugString(val[0]);
+    }
+    for (let i = 1; i < length; i++) {
+      debug += ", " + debugString(val[i]);
+    }
+    debug += "]";
+    return debug;
+  }
+  const builtInMatches = /\[object ([^\]]+)\]/.exec(toString.call(val));
+  let className;
+  if (builtInMatches && builtInMatches.length > 1) {
+    className = builtInMatches[1];
+  } else {
+    return toString.call(val);
+  }
+  if (className == "Object") {
+    try {
+      return "Object(" + JSON.stringify(val) + ")";
+    } catch (_) {
+      return "Object";
+    }
+  }
+  if (val instanceof Error) {
+    return `${val.name}: ${val.message}
+${val.stack}`;
+  }
+  return className;
+}
+function getArrayU8FromWasm0(ptr, len) {
+  ptr = ptr >>> 0;
+  return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
+}
+function getDataViewMemory0() {
+  if (cachedDataViewMemory0 === null || cachedDataViewMemory0.buffer.detached === true || cachedDataViewMemory0.buffer.detached === void 0 && cachedDataViewMemory0.buffer !== wasm.memory.buffer) {
+    cachedDataViewMemory0 = new DataView(wasm.memory.buffer);
+  }
+  return cachedDataViewMemory0;
+}
+function getStringFromWasm0(ptr, len) {
+  ptr = ptr >>> 0;
+  return decodeText(ptr, len);
+}
+function getUint8ArrayMemory0() {
+  if (cachedUint8ArrayMemory0 === null || cachedUint8ArrayMemory0.byteLength === 0) {
+    cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
+  }
+  return cachedUint8ArrayMemory0;
+}
+function handleError(f, args) {
+  try {
+    return f.apply(this, args);
+  } catch (e) {
+    const idx = addToExternrefTable0(e);
+    wasm.__wbindgen_exn_store(idx);
+  }
+}
+function isLikeNone(x) {
+  return x === void 0 || x === null;
+}
+function makeMutClosure(arg0, arg1, f) {
+  const state = { a: arg0, b: arg1, cnt: 1 };
+  const real = (...args) => {
+    state.cnt++;
+    const a = state.a;
+    state.a = 0;
+    try {
+      return f(a, state.b, ...args);
+    } finally {
+      state.a = a;
+      real._wbg_cb_unref();
+    }
+  };
+  real._wbg_cb_unref = () => {
+    if (--state.cnt === 0) {
+      wasm.__wbindgen_destroy_closure(state.a, state.b);
+      state.a = 0;
+      CLOSURE_DTORS.unregister(state);
+    }
+  };
+  CLOSURE_DTORS.register(real, state, state);
+  return real;
+}
+function passArray8ToWasm0(arg, malloc) {
+  const ptr = malloc(arg.length * 1, 1) >>> 0;
+  getUint8ArrayMemory0().set(arg, ptr / 1);
+  WASM_VECTOR_LEN = arg.length;
+  return ptr;
+}
+function passStringToWasm0(arg, malloc, realloc) {
+  if (realloc === void 0) {
+    const buf = cachedTextEncoder.encode(arg);
+    const ptr2 = malloc(buf.length, 1) >>> 0;
+    getUint8ArrayMemory0().subarray(ptr2, ptr2 + buf.length).set(buf);
+    WASM_VECTOR_LEN = buf.length;
+    return ptr2;
+  }
+  let len = arg.length;
+  let ptr = malloc(len, 1) >>> 0;
+  const mem = getUint8ArrayMemory0();
+  let offset = 0;
+  for (; offset < len; offset++) {
+    const code = arg.charCodeAt(offset);
+    if (code > 127) break;
+    mem[ptr + offset] = code;
+  }
+  if (offset !== len) {
+    if (offset !== 0) {
+      arg = arg.slice(offset);
+    }
+    ptr = realloc(ptr, len, len = offset + arg.length * 3, 1) >>> 0;
+    const view = getUint8ArrayMemory0().subarray(ptr + offset, ptr + len);
+    const ret = cachedTextEncoder.encodeInto(arg, view);
+    offset += ret.written;
+    ptr = realloc(ptr, len, offset, 1) >>> 0;
+  }
+  WASM_VECTOR_LEN = offset;
+  return ptr;
+}
+function takeFromExternrefTable0(idx) {
+  const value = wasm.__wbindgen_externrefs.get(idx);
+  wasm.__externref_table_dealloc(idx);
+  return value;
+}
+function decodeText(ptr, len) {
+  numBytesDecoded += len;
+  if (numBytesDecoded >= MAX_SAFARI_DECODE_BYTES) {
+    cachedTextDecoder = new TextDecoder("utf-8", { ignoreBOM: true, fatal: true });
+    cachedTextDecoder.decode();
+    numBytesDecoded = len;
+  }
+  return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));
+}
+function __wbg_finalize_init(instance, module2) {
+  wasm = instance.exports;
+  wasmModule = module2;
+  cachedDataViewMemory0 = null;
+  cachedUint8ArrayMemory0 = null;
+  wasm.__wbindgen_start();
+  return wasm;
+}
+async function __wbg_load(module2, imports) {
+  if (typeof Response === "function" && module2 instanceof Response) {
+    if (typeof WebAssembly.instantiateStreaming === "function") {
+      try {
+        return await WebAssembly.instantiateStreaming(module2, imports);
+      } catch (e) {
+        const validResponse = module2.ok && expectedResponseType(module2.type);
+        if (validResponse && module2.headers.get("Content-Type") !== "application/wasm") {
+          console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve Wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e);
+        } else {
+          throw e;
+        }
+      }
+    }
+    const bytes = await module2.arrayBuffer();
+    return await WebAssembly.instantiate(bytes, imports);
+  } else {
+    const instance = await WebAssembly.instantiate(module2, imports);
+    if (instance instanceof WebAssembly.Instance) {
+      return { instance, module: module2 };
+    } else {
+      return instance;
+    }
+  }
+  function expectedResponseType(type) {
+    switch (type) {
+      case "basic":
+      case "cors":
+      case "default":
+        return true;
+    }
+    return false;
+  }
+}
+function initSync(module2) {
+  if (wasm !== void 0) return wasm;
+  if (module2 !== void 0) {
+    if (Object.getPrototypeOf(module2) === Object.prototype) {
+      ({ module: module2 } = module2);
+    } else {
+      console.warn("using deprecated parameters for `initSync()`; pass a single object instead");
+    }
+  }
+  const imports = __wbg_get_imports();
+  if (!(module2 instanceof WebAssembly.Module)) {
+    module2 = new WebAssembly.Module(module2);
+  }
+  const instance = new WebAssembly.Instance(module2, imports);
+  return __wbg_finalize_init(instance, module2);
+}
+async function __wbg_init(module_or_path) {
+  if (wasm !== void 0) return wasm;
+  if (module_or_path !== void 0) {
+    if (Object.getPrototypeOf(module_or_path) === Object.prototype) {
+      ({ module_or_path } = module_or_path);
+    } else {
+      console.warn("using deprecated parameters for the initialization function; pass a single object instead");
+    }
+  }
+  if (module_or_path === void 0) {
+    module_or_path = new URL("rgb_lib_wasm_bindings_bg.wasm", import.meta.url);
+  }
+  const imports = __wbg_get_imports();
+  if (typeof module_or_path === "string" || typeof Request === "function" && module_or_path instanceof Request || typeof URL === "function" && module_or_path instanceof URL) {
+    module_or_path = fetch(module_or_path);
+  }
+  const { instance, module: module2 } = await __wbg_load(await module_or_path, imports);
+  return __wbg_finalize_init(instance, module2);
+}
+var WasmInvoice, WasmWallet, __wbindgen_enum_IdbTransactionMode, __wbindgen_enum_RequestCache, __wbindgen_enum_RequestCredentials, __wbindgen_enum_RequestMode, WasmInvoiceFinalization, WasmWalletFinalization, CLOSURE_DTORS, cachedDataViewMemory0, cachedUint8ArrayMemory0, cachedTextDecoder, MAX_SAFARI_DECODE_BYTES, numBytesDecoded, cachedTextEncoder, WASM_VECTOR_LEN, wasmModule, wasm;
+var init_rgb_lib_wasm_bindings = __esm({
+  "node_modules/@utexo/rgb-lib-wasm/rgb_lib_wasm_bindings.js"() {
+    WasmInvoice = class {
+      __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmInvoiceFinalization.unregister(this);
+        return ptr;
+      }
+      free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasminvoice_free(ptr, 0);
+      }
+      /**
+       * Return the parsed invoice data as a JS object.
+       * @returns {any}
+       */
+      invoiceData() {
+        const ret = wasm.wasminvoice_invoiceData(this.__wbg_ptr);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * Return the original invoice string.
+       * @returns {string}
+       */
+      invoiceString() {
+        let deferred1_0;
+        let deferred1_1;
+        try {
+          const ret = wasm.wasminvoice_invoiceString(this.__wbg_ptr);
+          deferred1_0 = ret[0];
+          deferred1_1 = ret[1];
+          return getStringFromWasm0(ret[0], ret[1]);
+        } finally {
+          wasm.__wbindgen_free(deferred1_0, deferred1_1, 1);
+        }
+      }
+      /**
+       * Parse an RGB invoice string. Throws if the string is not a valid RGB invoice.
+       * @param {string} invoice_string
+       */
+      constructor(invoice_string) {
+        const ptr0 = passStringToWasm0(invoice_string, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasminvoice_new(ptr0, len0);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        this.__wbg_ptr = ret[0] >>> 0;
+        WasmInvoiceFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+      }
+    };
+    if (Symbol.dispose) WasmInvoice.prototype[Symbol.dispose] = WasmInvoice.prototype.free;
+    WasmWallet = class _WasmWallet {
+      static __wrap(ptr) {
+        ptr = ptr >>> 0;
+        const obj = Object.create(_WasmWallet.prototype);
+        obj.__wbg_ptr = ptr;
+        WasmWalletFinalization.register(obj, obj.__wbg_ptr, obj);
+        return obj;
+      }
+      __destroy_into_raw() {
+        const ptr = this.__wbg_ptr;
+        this.__wbg_ptr = 0;
+        WasmWalletFinalization.unregister(this);
+        return ptr;
+      }
+      free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_wasmwallet_free(ptr, 0);
+      }
+      /**
+       * Create an encrypted backup of the wallet state. Returns backup bytes as Uint8Array.
+       * @param {string} password
+       * @returns {Uint8Array}
+       */
+      backup(password) {
+        const ptr0 = passStringToWasm0(password, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_backup(this.__wbg_ptr, ptr0, len0);
+        if (ret[3]) {
+          throw takeFromExternrefTable0(ret[2]);
+        }
+        var v2 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+        wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+        return v2;
+      }
+      /**
+       * Check if the wallet needs a backup. Returns true if modified since last backup.
+       * @returns {boolean}
+       */
+      backupInfo() {
+        const ret = wasm.wasmwallet_backupInfo(this.__wbg_ptr);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] !== 0;
+      }
+      /**
+       * Blind an UTXO to receive RGB assets. Returns ReceiveData as a JS object.
+       *
+       * `assignment_js` is a JS object like `{ "Fungible": 100 }` or `"NonFungible"` or `"Any"`.
+       * `transport_endpoints_js` is a JS array of endpoint strings.
+       * @param {string | null | undefined} asset_id
+       * @param {any} assignment_js
+       * @param {number | null | undefined} duration_seconds
+       * @param {any} transport_endpoints_js
+       * @param {number} min_confirmations
+       * @returns {any}
+       */
+      blindReceive(asset_id, assignment_js, duration_seconds, transport_endpoints_js, min_confirmations) {
+        var ptr0 = isLikeNone(asset_id) ? 0 : passStringToWasm0(asset_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_blindReceive(this.__wbg_ptr, ptr0, len0, assignment_js, isLikeNone(duration_seconds) ? 4294967297 : duration_seconds >>> 0, transport_endpoints_js, min_confirmations);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * Configure VSS (cloud) backup for this wallet.
+       *
+       * `signing_key_hex` is the 32-byte secret key as a hex string (64 hex chars).
+       *
+       * **Security note:** The signing key crosses the JS/WASM boundary as a string. It will
+       * exist in V8's string pool and cannot be zeroed from Rust. Callers should avoid storing
+       * the key in JS longer than necessary (e.g., don't keep it in a global variable).
+       * @param {string} server_url
+       * @param {string} store_id
+       * @param {string} signing_key_hex
+       */
+      configureVssBackup(server_url, store_id, signing_key_hex) {
+        const ptr0 = passStringToWasm0(server_url, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(store_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passStringToWasm0(signing_key_hex, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len2 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_configureVssBackup(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2);
+        if (ret[1]) {
+          throw takeFromExternrefTable0(ret[0]);
+        }
+      }
+      /**
+       * Create a new RGB wallet with IndexedDB state restoration.
+       *
+       * Like `new()`, but asynchronously checks IndexedDB for a previously saved
+       * snapshot and restores it, so wallet state survives page refreshes.
+       * @param {string} wallet_data_json
+       * @returns {Promise<WasmWallet>}
+       */
+      static create(wallet_data_json) {
+        const ptr0 = passStringToWasm0(wallet_data_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_create(ptr0, len0);
+        return ret;
+      }
+      /**
+       * Create UTXOs (begin): prepare a PSBT to create new UTXOs for RGB allocations.
+       * Returns the unsigned PSBT string.
+       * @param {any} online_js
+       * @param {boolean} up_to
+       * @param {number | null | undefined} num
+       * @param {number | null | undefined} size
+       * @param {bigint} fee_rate
+       * @param {boolean} skip_sync
+       * @returns {Promise<string>}
+       */
+      createUtxosBegin(online_js, up_to, num, size, fee_rate, skip_sync) {
+        const ret = wasm.wasmwallet_createUtxosBegin(this.__wbg_ptr, online_js, up_to, isLikeNone(num) ? 16777215 : num, isLikeNone(size) ? 4294967297 : size >>> 0, fee_rate, skip_sync);
+        return ret;
+      }
+      /**
+       * Create UTXOs (end): broadcast a signed PSBT to create new UTXOs.
+       * Returns the number of created UTXOs.
+       * @param {any} online_js
+       * @param {string} signed_psbt
+       * @param {boolean} skip_sync
+       * @returns {Promise<number>}
+       */
+      createUtxosEnd(online_js, signed_psbt, skip_sync) {
+        const ptr0 = passStringToWasm0(signed_psbt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_createUtxosEnd(this.__wbg_ptr, online_js, ptr0, len0, skip_sync);
+        return ret;
+      }
+      /**
+       * Delete failed transfers. Returns true if any were deleted.
+       * @param {number | null | undefined} batch_transfer_idx
+       * @param {boolean} no_asset_only
+       * @returns {boolean}
+       */
+      deleteTransfers(batch_transfer_idx, no_asset_only) {
+        const ret = wasm.wasmwallet_deleteTransfers(this.__wbg_ptr, isLikeNone(batch_transfer_idx) ? 4294967297 : batch_transfer_idx >> 0, no_asset_only);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] !== 0;
+      }
+      /**
+       * Disable VSS (cloud) backup.
+       */
+      disableVssBackup() {
+        wasm.wasmwallet_disableVssBackup(this.__wbg_ptr);
+      }
+      /**
+       * Drain all wallet funds (begin): prepare a PSBT. Returns the unsigned PSBT string.
+       * @param {any} online_js
+       * @param {string} address
+       * @param {boolean} destroy_assets
+       * @param {bigint} fee_rate
+       * @returns {Promise<string>}
+       */
+      drainToBegin(online_js, address, destroy_assets, fee_rate) {
+        const ptr0 = passStringToWasm0(address, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_drainToBegin(this.__wbg_ptr, online_js, ptr0, len0, destroy_assets, fee_rate);
+        return ret;
+      }
+      /**
+       * Drain all wallet funds (end): broadcast a signed PSBT. Returns the txid string.
+       * @param {any} online_js
+       * @param {string} signed_psbt
+       * @returns {Promise<string>}
+       */
+      drainToEnd(online_js, signed_psbt) {
+        const ptr0 = passStringToWasm0(signed_psbt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_drainToEnd(this.__wbg_ptr, online_js, ptr0, len0);
+        return ret;
+      }
+      /**
+       * Fail pending transfers. Returns true if any transfers were failed.
+       * @param {any} online_js
+       * @param {number | null | undefined} batch_transfer_idx
+       * @param {boolean} no_asset_only
+       * @param {boolean} skip_sync
+       * @returns {Promise<boolean>}
+       */
+      failTransfers(online_js, batch_transfer_idx, no_asset_only, skip_sync) {
+        const ret = wasm.wasmwallet_failTransfers(this.__wbg_ptr, online_js, isLikeNone(batch_transfer_idx) ? 4294967297 : batch_transfer_idx >> 0, no_asset_only, skip_sync);
+        return ret;
+      }
+      /**
+       * Finalize a signed PSBT (base64-encoded). Returns the finalized PSBT string.
+       * @param {string} signed_psbt
+       * @returns {string}
+       */
+      finalizePsbt(signed_psbt) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+          const ptr0 = passStringToWasm0(signed_psbt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+          const len0 = WASM_VECTOR_LEN;
+          const ret = wasm.wasmwallet_finalizePsbt(this.__wbg_ptr, ptr0, len0);
+          var ptr2 = ret[0];
+          var len2 = ret[1];
+          if (ret[3]) {
+            ptr2 = 0;
+            len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+          }
+          deferred3_0 = ptr2;
+          deferred3_1 = len2;
+          return getStringFromWasm0(ptr2, len2);
+        } finally {
+          wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+      }
+      /**
+       * Durably persist current wallet state to IndexedDB.
+       * @returns {Promise<void>}
+       */
+      flush() {
+        const ret = wasm.wasmwallet_flush(this.__wbg_ptr);
+        return ret;
+      }
+      /**
+       * Run a BIP44 stop-gap full scan against the indexer.
+       *
+       * Rebuilds a thin BDK state (no revealed SPKs) after a restore, recovering the BTC balance
+       * when an incremental `sync` cannot.
+       * @param {any} online_js
+       * @returns {Promise<void>}
+       */
+      fullScan(online_js) {
+        const ret = wasm.wasmwallet_fullScan(this.__wbg_ptr, online_js);
+        return ret;
+      }
+      /**
+       * Return a new Bitcoin address from the vanilla wallet.
+       * @returns {string}
+       */
+      getAddress() {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+          const ret = wasm.wasmwallet_getAddress(this.__wbg_ptr);
+          var ptr1 = ret[0];
+          var len1 = ret[1];
+          if (ret[3]) {
+            ptr1 = 0;
+            len1 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+          }
+          deferred2_0 = ptr1;
+          deferred2_1 = len1;
+          return getStringFromWasm0(ptr1, len1);
+        } finally {
+          wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+      }
+      /**
+       * Return the balance for a specific asset.
+       * @param {string} asset_id
+       * @returns {any}
+       */
+      getAssetBalance(asset_id) {
+        const ptr0 = passStringToWasm0(asset_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_getAssetBalance(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * Return metadata for a specific asset (name, ticker, precision, supply, etc.).
+       * @param {string} asset_id
+       * @returns {any}
+       */
+      getAssetMetadata(asset_id) {
+        const ptr0 = passStringToWasm0(asset_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_getAssetMetadata(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * Return the BTC balance. Always skips sync on wasm32.
+       * @returns {any}
+       */
+      getBtcBalance() {
+        const ret = wasm.wasmwallet_getBtcBalance(this.__wbg_ptr);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * Get fee estimation for a target number of blocks.
+       * @param {any} online_js
+       * @param {number} blocks
+       * @returns {Promise<number>}
+       */
+      getFeeEstimation(online_js, blocks) {
+        const ret = wasm.wasmwallet_getFeeEstimation(this.__wbg_ptr, online_js, blocks);
+        return ret;
+      }
+      /**
+       * Return the WalletData as a JS object.
+       * @returns {any}
+       */
+      getWalletData() {
+        const ret = wasm.wasmwallet_getWalletData(this.__wbg_ptr);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * Go online: connect to an indexer. Returns Online data as a JS object.
+       * @param {boolean} skip_consistency_check
+       * @param {string} indexer_url
+       * @returns {Promise<any>}
+       */
+      goOnline(skip_consistency_check, indexer_url) {
+        const ptr0 = passStringToWasm0(indexer_url, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_goOnline(this.__wbg_ptr, skip_consistency_check, ptr0, len0);
+        return ret;
+      }
+      /**
+       * Inflate an IFA asset (begin): prepare a PSBT. Returns the unsigned PSBT string.
+       *
+       * `inflation_amounts_js` is a JS array of u64 values.
+       * @param {any} online_js
+       * @param {string} asset_id
+       * @param {any} inflation_amounts_js
+       * @param {bigint} fee_rate
+       * @param {number} min_confirmations
+       * @returns {Promise<string>}
+       */
+      inflateBegin(online_js, asset_id, inflation_amounts_js, fee_rate, min_confirmations) {
+        const ptr0 = passStringToWasm0(asset_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_inflateBegin(this.__wbg_ptr, online_js, ptr0, len0, inflation_amounts_js, fee_rate, min_confirmations);
+        return ret;
+      }
+      /**
+       * Inflate an IFA asset (end): broadcast a signed PSBT. Returns an OperationResult JS object.
+       * @param {any} online_js
+       * @param {string} signed_psbt
+       * @returns {Promise<any>}
+       */
+      inflateEnd(online_js, signed_psbt) {
+        const ptr0 = passStringToWasm0(signed_psbt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_inflateEnd(this.__wbg_ptr, online_js, ptr0, len0);
+        return ret;
+      }
+      /**
+       * Issue a new IFA (Inflatable Fungible Asset).
+       *
+       * `amounts_js` is a JS array of u64 values.
+       * `inflation_amounts_js` is a JS array of u64 values for inflation allowances.
+       * @param {string} ticker
+       * @param {string} name
+       * @param {number} precision
+       * @param {any} amounts_js
+       * @param {any} inflation_amounts_js
+       * @param {string | null} [reject_list_url]
+       * @returns {any}
+       */
+      issueAssetIfa(ticker, name, precision, amounts_js, inflation_amounts_js, reject_list_url) {
+        const ptr0 = passStringToWasm0(ticker, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        var ptr2 = isLikeNone(reject_list_url) ? 0 : passStringToWasm0(reject_list_url, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len2 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_issueAssetIfa(this.__wbg_ptr, ptr0, len0, ptr1, len1, precision, amounts_js, inflation_amounts_js, ptr2, len2);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * Issue a new NIA (Non-Inflatable Asset).
+       *
+       * `amounts_js` is a JS array of u64 values.
+       * @param {string} ticker
+       * @param {string} name
+       * @param {number} precision
+       * @param {any} amounts_js
+       * @returns {any}
+       */
+      issueAssetNia(ticker, name, precision, amounts_js) {
+        const ptr0 = passStringToWasm0(ticker, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_issueAssetNia(this.__wbg_ptr, ptr0, len0, ptr1, len1, precision, amounts_js);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * List known RGB assets. Pass a JS array of schema strings to filter, or empty for all.
+       * @param {any} filter_asset_schemas_js
+       * @returns {any}
+       */
+      listAssets(filter_asset_schemas_js) {
+        const ret = wasm.wasmwallet_listAssets(this.__wbg_ptr, filter_asset_schemas_js);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * List Bitcoin transactions. Always skips sync on wasm32.
+       * @returns {any}
+       */
+      listTransactions() {
+        const ret = wasm.wasmwallet_listTransactions(this.__wbg_ptr);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * List RGB transfers, optionally filtered by asset ID.
+       * @param {string | null} [asset_id]
+       * @returns {any}
+       */
+      listTransfers(asset_id) {
+        var ptr0 = isLikeNone(asset_id) ? 0 : passStringToWasm0(asset_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_listTransfers(this.__wbg_ptr, ptr0, len0);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * List unspent outputs. Always skips sync on wasm32.
+       * @param {boolean} settled_only
+       * @returns {any}
+       */
+      listUnspents(settled_only) {
+        const ret = wasm.wasmwallet_listUnspents(this.__wbg_ptr, settled_only);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+      /**
+       * List vanilla (non-colored) unspent outputs. Returns a JS array of LocalOutput objects.
+       * @param {any} online_js
+       * @param {number} min_confirmations
+       * @param {boolean} skip_sync
+       * @returns {Promise<any>}
+       */
+      listUnspentsVanilla(online_js, min_confirmations, skip_sync) {
+        const ret = wasm.wasmwallet_listUnspentsVanilla(this.__wbg_ptr, online_js, min_confirmations, skip_sync);
+        return ret;
+      }
+      /**
+       * Create a new RGB wallet from a JSON-encoded WalletData.
+       * @param {string} wallet_data_json
+       */
+      constructor(wallet_data_json) {
+        const ptr0 = passStringToWasm0(wallet_data_json, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_new(ptr0, len0);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        this.__wbg_ptr = ret[0] >>> 0;
+        WasmWalletFinalization.register(this, this.__wbg_ptr, this);
+        return this;
+      }
+      /**
+       * Refresh pending transfers. Returns a RefreshResult JS object.
+       *
+       * `filter_js` is a JS array of RefreshFilter objects (or empty array for all).
+       * @param {any} online_js
+       * @param {string | null | undefined} asset_id
+       * @param {any} filter_js
+       * @param {boolean} skip_sync
+       * @returns {Promise<any>}
+       */
+      refresh(online_js, asset_id, filter_js, skip_sync) {
+        var ptr0 = isLikeNone(asset_id) ? 0 : passStringToWasm0(asset_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_refresh(this.__wbg_ptr, online_js, ptr0, len0, filter_js, skip_sync);
+        return ret;
+      }
+      /**
+       * Restore wallet state from an encrypted backup.
+       * @param {Uint8Array} backup_bytes
+       * @param {string} password
+       */
+      restoreBackup(backup_bytes, password) {
+        const ptr0 = passArray8ToWasm0(backup_bytes, wasm.__wbindgen_malloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passStringToWasm0(password, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len1 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_restoreBackup(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+        if (ret[1]) {
+          throw takeFromExternrefTable0(ret[0]);
+        }
+      }
+      /**
+       * Rotate the pinned address for the given keychain.
+       * keychain: 0 = External (colored), 1 = Internal (vanilla)
+       * @param {number} keychain
+       * @returns {string}
+       */
+      rotateAddress(keychain) {
+        let deferred2_0;
+        let deferred2_1;
+        try {
+          const ret = wasm.wasmwallet_rotateAddress(this.__wbg_ptr, keychain);
+          var ptr1 = ret[0];
+          var len1 = ret[1];
+          if (ret[3]) {
+            ptr1 = 0;
+            len1 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+          }
+          deferred2_0 = ptr1;
+          deferred2_1 = len1;
+          return getStringFromWasm0(ptr1, len1);
+        } finally {
+          wasm.__wbindgen_free(deferred2_0, deferred2_1, 1);
+        }
+      }
+      /**
+       * Send RGB assets (begin): prepare a PSBT. Returns the unsigned PSBT string.
+       *
+       * `recipient_map_js` is a JS object mapping asset IDs to arrays of Recipient objects.
+       * @param {any} online_js
+       * @param {any} recipient_map_js
+       * @param {boolean} donation
+       * @param {bigint} fee_rate
+       * @param {number} min_confirmations
+       * @param {number | null} [lock_time]
+       * @returns {Promise<string>}
+       */
+      sendBegin(online_js, recipient_map_js, donation, fee_rate, min_confirmations, lock_time) {
+        const ret = wasm.wasmwallet_sendBegin(this.__wbg_ptr, online_js, recipient_map_js, donation, fee_rate, min_confirmations, isLikeNone(lock_time) ? 4294967297 : lock_time >>> 0);
+        return ret;
+      }
+      /**
+       * Send BTC (begin): prepare a PSBT. Returns the unsigned PSBT string.
+       * @param {any} online_js
+       * @param {string} address
+       * @param {bigint} amount
+       * @param {bigint} fee_rate
+       * @param {boolean} skip_sync
+       * @returns {Promise<string>}
+       */
+      sendBtcBegin(online_js, address, amount, fee_rate, skip_sync) {
+        const ptr0 = passStringToWasm0(address, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_sendBtcBegin(this.__wbg_ptr, online_js, ptr0, len0, amount, fee_rate, skip_sync);
+        return ret;
+      }
+      /**
+       * Send BTC (end): broadcast a signed PSBT. Returns the txid string.
+       * @param {any} online_js
+       * @param {string} signed_psbt
+       * @param {boolean} skip_sync
+       * @returns {Promise<string>}
+       */
+      sendBtcEnd(online_js, signed_psbt, skip_sync) {
+        const ptr0 = passStringToWasm0(signed_psbt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_sendBtcEnd(this.__wbg_ptr, online_js, ptr0, len0, skip_sync);
+        return ret;
+      }
+      /**
+       * Send RGB assets (end): broadcast a signed PSBT. Returns an OperationResult JS object.
+       * @param {any} online_js
+       * @param {string} signed_psbt
+       * @param {boolean} skip_sync
+       * @returns {Promise<any>}
+       */
+      sendEnd(online_js, signed_psbt, skip_sync) {
+        const ptr0 = passStringToWasm0(signed_psbt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_sendEnd(this.__wbg_ptr, online_js, ptr0, len0, skip_sync);
+        return ret;
+      }
+      /**
+       * Sign a PSBT (base64-encoded). Returns the signed PSBT string.
+       * @param {string} unsigned_psbt
+       * @returns {string}
+       */
+      signPsbt(unsigned_psbt) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+          const ptr0 = passStringToWasm0(unsigned_psbt, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+          const len0 = WASM_VECTOR_LEN;
+          const ret = wasm.wasmwallet_signPsbt(this.__wbg_ptr, ptr0, len0);
+          var ptr2 = ret[0];
+          var len2 = ret[1];
+          if (ret[3]) {
+            ptr2 = 0;
+            len2 = 0;
+            throw takeFromExternrefTable0(ret[2]);
+          }
+          deferred3_0 = ptr2;
+          deferred3_1 = len2;
+          return getStringFromWasm0(ptr2, len2);
+        } finally {
+          wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+      }
+      /**
+       * Sync the wallet with the indexer.
+       *
+       * Incremental: re-queries only already-revealed SPKs. Use `fullScan` to recover a thin
+       * restored state.
+       * @param {any} online_js
+       * @returns {Promise<void>}
+       */
+      sync(online_js) {
+        const ret = wasm.wasmwallet_sync(this.__wbg_ptr, online_js);
+        return ret;
+      }
+      /**
+       * Upload an encrypted backup to the configured VSS server. Returns the server version.
+       * @returns {Promise<any>}
+       */
+      vssBackup() {
+        const ret = wasm.wasmwallet_vssBackup(this.__wbg_ptr);
+        return ret;
+      }
+      /**
+       * Query VSS backup status. Returns { backup_exists, server_version, backup_required }.
+       * @returns {Promise<any>}
+       */
+      vssBackupInfo() {
+        const ret = wasm.wasmwallet_vssBackupInfo(this.__wbg_ptr);
+        return ret;
+      }
+      /**
+       * Download and restore wallet state from VSS server.
+       * @returns {Promise<void>}
+       */
+      vssRestoreBackup() {
+        const ret = wasm.wasmwallet_vssRestoreBackup(this.__wbg_ptr);
+        return ret;
+      }
+      /**
+       * Create an address to receive RGB assets via witness TX. Returns ReceiveData as a JS object.
+       * @param {string | null | undefined} asset_id
+       * @param {any} assignment_js
+       * @param {number | null | undefined} duration_seconds
+       * @param {any} transport_endpoints_js
+       * @param {number} min_confirmations
+       * @returns {any}
+       */
+      witnessReceive(asset_id, assignment_js, duration_seconds, transport_endpoints_js, min_confirmations) {
+        var ptr0 = isLikeNone(asset_id) ? 0 : passStringToWasm0(asset_id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len0 = WASM_VECTOR_LEN;
+        const ret = wasm.wasmwallet_witnessReceive(this.__wbg_ptr, ptr0, len0, assignment_js, isLikeNone(duration_seconds) ? 4294967297 : duration_seconds >>> 0, transport_endpoints_js, min_confirmations);
+        if (ret[2]) {
+          throw takeFromExternrefTable0(ret[1]);
+        }
+        return takeFromExternrefTable0(ret[0]);
+      }
+    };
+    if (Symbol.dispose) WasmWallet.prototype[Symbol.dispose] = WasmWallet.prototype.free;
+    __wbindgen_enum_IdbTransactionMode = ["readonly", "readwrite", "versionchange", "readwriteflush", "cleanup"];
+    __wbindgen_enum_RequestCache = ["default", "no-store", "reload", "no-cache", "force-cache", "only-if-cached"];
+    __wbindgen_enum_RequestCredentials = ["omit", "same-origin", "include"];
+    __wbindgen_enum_RequestMode = ["same-origin", "no-cors", "cors", "navigate"];
+    WasmInvoiceFinalization = typeof FinalizationRegistry === "undefined" ? { register: () => {
+    }, unregister: () => {
+    } } : new FinalizationRegistry((ptr) => wasm.__wbg_wasminvoice_free(ptr >>> 0, 1));
+    WasmWalletFinalization = typeof FinalizationRegistry === "undefined" ? { register: () => {
+    }, unregister: () => {
+    } } : new FinalizationRegistry((ptr) => wasm.__wbg_wasmwallet_free(ptr >>> 0, 1));
+    CLOSURE_DTORS = typeof FinalizationRegistry === "undefined" ? { register: () => {
+    }, unregister: () => {
+    } } : new FinalizationRegistry((state) => wasm.__wbindgen_destroy_closure(state.a, state.b));
+    cachedDataViewMemory0 = null;
+    cachedUint8ArrayMemory0 = null;
+    cachedTextDecoder = new TextDecoder("utf-8", { ignoreBOM: true, fatal: true });
+    cachedTextDecoder.decode();
+    MAX_SAFARI_DECODE_BYTES = 2146435072;
+    numBytesDecoded = 0;
+    cachedTextEncoder = new TextEncoder();
+    if (!("encodeInto" in cachedTextEncoder)) {
+      cachedTextEncoder.encodeInto = function(arg, view) {
+        const buf = cachedTextEncoder.encode(arg);
+        view.set(buf);
+        return {
+          read: arg.length,
+          written: buf.length
+        };
+      };
+    }
+    WASM_VECTOR_LEN = 0;
+  }
+});
 
 // node_modules/@tetherto/wdk-wallet/src/wallet-manager.js
-init_buffer_shim();
 var bip39 = __toESM(require_src(), 1);
 
 // node_modules/@tetherto/wdk-wallet/src/errors.js
-init_buffer_shim();
-var NotImplementedError = class extends Error {
+var WdkError = class extends Error {
   /**
-   * Create a new not implemented error.
+   * Creates a new wallet development kit error.
+   *
+   * @param {string} message - The error's message.
+   * @param {ErrorOptions} [options] - The error's options.
+   */
+  constructor(message, options) {
+    super(message, options);
+    this.name = "WdkError";
+  }
+};
+var NotImplementedError = class extends WdkError {
+  /**
+   * Creates a new not implemented error.
    *
    * @param {string} methodName - The method's name.
    */
   constructor(methodName) {
-    super(`Method '${methodName}' must be implemented.`);
+    super(`Method '${methodName}' is not implemented.`);
     this.name = "NotImplementedError";
   }
 };
-var UnsupportedOperationError = class extends Error {
+var AssertionError = class extends WdkError {
   /**
-   * Create a new unsupported operation error. Thrown by an optional operation
-   * that the concrete implementation deliberately does not support.
+   * Creates a new assertion error.
    *
-   * @param {string} operation - The name of the operation that is not supported.
+   * @param {string} message - The error's message.
    */
-  constructor(operation) {
-    super(`Operation '${operation}' is not supported by this protocol.`);
+  constructor(message) {
+    super(message);
+    this.name = "AssertionError";
+  }
+};
+var UnsupportedOperationError = class extends WdkError {
+  /**
+   * Creates a new unsupported operation error.
+   *
+   * @param {string} method - The method's name.
+   */
+  constructor(method) {
+    super(`Method '${method}' is not supported.`);
     this.name = "UnsupportedOperationError";
+  }
+};
+var ValueError = class extends WdkError {
+  /**
+   * Creates a new value error.
+   *
+   * @param {string} message - The error's message.
+   * @param {ErrorOptions} [options] - The error's options.
+   */
+  constructor(message, options) {
+    super(message, options);
+    this.name = "ValueError";
+  }
+};
+var NoSuchElementError = class extends WdkError {
+  /**
+   * Creates a new no such element error.
+   *
+   * @param {string} message - The error's message.
+   * @param {ErrorOptions} [options] - The error's options.
+   */
+  constructor(message, options) {
+    super(message, options);
+    this.name = "NoSuchElementError";
+  }
+};
+var ProviderError = class extends WdkError {
+  /**
+   * Creates a new provider error.
+   *
+   * @param {string} message - The error's message.
+   * @param {ProviderErrorOptions & ErrorOptions} options - The error's options.
+   */
+  constructor(message, options) {
+    super(message, options);
+    this.name = "ProviderError";
+    this.reason = options.reason;
+  }
+};
+var TimeoutError = class extends WdkError {
+  /**
+   * Create a new timeout error.
+   *
+   * @param {string} message - The error's message.
+   */
+  constructor(message) {
+    super(message);
+    this.name = "TimeoutError";
   }
 };
 
 // node_modules/@tetherto/wdk-wallet/src/wallet-manager.js
 var WalletManager = class _WalletManager {
   /**
-   * Creates a new wallet manager from a BIP-39 seed.
+   * Creates a new wallet manager from a seed.
    *
    * @overload
-   * @param {string | Uint8Array} seed - The BIP-39 seed phrase or raw seed bytes.
+   * @param {string | Uint8Array} seed - A BIP-39 mnemonic seed phrase, or a raw BIP-32 master seed (16-64 bytes).
    * @param {WalletConfig} [config] - The wallet configuration.
+   * @throws {ValueError} If the seed is not a valid seed or BIP-39 seed phrase.
    */
   /**
    * Creates a new wallet manager from a default signer.
@@ -23861,11 +24072,12 @@ var WalletManager = class _WalletManager {
    * @overload
    * @param {ISigner} signer - The default signer.
    * @param {WalletConfig} [config] - The wallet configuration.
+   * @throws {InvalidSignerError} If the given signer doesn't support account derivation.
    */
   constructor(seedOrSigner, config = {}) {
     if (typeof seedOrSigner === "string") {
       if (!_WalletManager.isValidSeedPhrase(seedOrSigner)) {
-        throw new Error("The seed phrase is invalid.");
+        throw new ValueError("Invalid seed phrase.");
       }
       seedOrSigner = bip39.mnemonicToSeedSync(seedOrSigner);
     }
@@ -23879,11 +24091,11 @@ var WalletManager = class _WalletManager {
   /**
    * Returns a random [BIP-39](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki) seed phrase.
    *
-   * @param {12 | 24} [wordCount=12] - The number of words in the seed phrase.
+   * @param {12 | 24} [wordCount] - The number of words in the seed phrase (default: 12).
    * @returns {string} The seed phrase.
    */
   static getRandomSeedPhrase(wordCount = 12) {
-    const strength = wordCount === 24 ? 256 : 128;
+    const strength = wordCount === 12 ? 128 : 256;
     return bip39.generateMnemonic(strength);
   }
   /**
@@ -23904,40 +24116,37 @@ var WalletManager = class _WalletManager {
     return this._seed;
   }
   /**
-   * Registers a signer under the given name.
+   * Registers a signer with the given name.
    *
    * @param {string} signerName - The signer name.
    * @param {ISigner} signer - The signer.
    * @returns {WalletManager} The wallet manager.
-   * @throws {Error} If `signerName` is an empty or blank string.
+   * @throws {ValueError} If the signer name is an empty or blank string.
    */
   addSigner(signerName, signer) {
     if (!signerName.trim()) {
-      throw new Error("The signer name cannot be an empty or blank string.");
+      throw new ValueError("The signer name cannot be an empty or blank string.");
     }
     this._signers[signerName] = signer;
     return this;
   }
   /**
-   * Returns a signer. With no arguments, returns the default signer provided
-   * at construction. With a name, returns the signer registered under that
-   * name via {@link addSigner}.
+   * Returns the default signer, or the signer with the given name.
    *
-   * @param {string} [signerName] - The signer name. Omit to get the default.
+   * @param {string} [signerName] - If set, returns the signer with the given name.
    * @returns {ISigner} The signer.
-   * @throws {Error} If called with no arguments and no default signer was
-   * provided at construction, or if called with a name that is not registered.
+   * @throws {NoSuchElementError} If the default signer is not set, or no signers are found for the given name.
    */
   getSigner(signerName) {
     if (signerName === void 0) {
       if (this._defaultSigner === void 0) {
-        throw new Error("No default signer registered.");
+        throw new NoSuchElementError("No default signer set.");
       }
       return this._defaultSigner;
     }
     const signer = this._signers[signerName];
     if (signer === void 0) {
-      throw new Error(`No signer registered with name "${signerName}".`);
+      throw new NoSuchElementError(`No signer found with name "${signerName}".`);
     }
     return signer;
   }
@@ -23957,10 +24166,11 @@ var WalletManager = class _WalletManager {
    * @overload
    * @param {number} [index] - The index of the account to get (default: 0).
    * @param {Object} [options] - Account options.
-   * @param {string} [options.signerName] - The signer name. Omit to use the default signer.
+   * @param {string} [options.signerName] - The signer name.
    * @returns {Promise<IWalletAccount>} The account.
-   * @throws {Error} If a signer name is given but no signer exists with that name.
-   * @throws {SignerError} If the signer doesn't support account derivation.
+   * @throws {ValueError} If the index is not valid.
+   * @throws {NoSuchElementError} If a signer name is given but no signer exists with that name.
+   * @throws {InvalidSignerError} If the signer doesn't support account derivation.
    */
   /**
    * Returns the wallet account associated with a registered signer. For
@@ -23971,7 +24181,7 @@ var WalletManager = class _WalletManager {
    * @overload
    * @param {string} signerName - The signer name registered via {@link addSigner}.
    * @returns {Promise<IWalletAccount>} The account.
-   * @throws {Error} If no signer exists with the given name.
+   * @throws {NoSuchElementError} If no signer exists with the given name.
    */
   /** @abstract */
   async getAccount(indexOrSignerName = 0, options = {}) {
@@ -23985,8 +24195,9 @@ var WalletManager = class _WalletManager {
    * @param {Object} [options] - Account options.
    * @param {string} [options.signerName] - The signer name. Omit to use the default signer.
    * @returns {Promise<IWalletAccount>} The account.
-   * @throws {Error} If a signer name is given but no signer exists with that name.
-   * @throws {SignerError} If the signer doesn't support account derivation.
+   * @throws {ValueError} If the path is not valid.
+   * @throws {NoSuchElementError} If a signer name is given but no signer exists with that name.
+   * @throws {InvalidSignerError} If the signer doesn't support account derivation.
    */
   async getAccountByPath(path, options = {}) {
     throw new NotImplementedError("getAccountByPath(path, options?)");
@@ -23996,6 +24207,8 @@ var WalletManager = class _WalletManager {
    *
    * @abstract
    * @returns {Promise<FeeRates>} The fee rates (in base unit).
+   * @throws {ProviderRequiredError} If the method requires a provider.
+   * @throws {ProviderError} If the provider fails to fetch fee rates.
    */
   async getFeeRates() {
     throw new NotImplementedError("getFeeRates()");
@@ -24020,15 +24233,63 @@ var WalletManager = class _WalletManager {
 };
 
 // node_modules/@tetherto/wdk-wallet/src/wallet-account-read-only.js
-init_buffer_shim();
-var IWalletAccountReadOnly = class {
+var FINALITY = {
+  pending: 0,
+  dropped: 1,
+  confirmed: 2,
+  final: 3
+};
+async function sleep(amount) {
+  await new Promise((resolve) => setTimeout(resolve, amount));
+}
+var WalletAccountReadOnly = class {
+  /**
+   * The default poll cadence for {@link waitForTransaction}, in milliseconds,
+   * applied when the caller doesn't provide an `interval`. Subclasses override
+   * it to match their chain's block time.
+   *
+   * @type {number}
+   */
+  get defaultWaitInterval() {
+    return 4e3;
+  }
+  /**
+   * The default time budget for {@link waitForTransaction}, in milliseconds,
+   * applied when the caller doesn't provide a `timeout`. Subclasses override it
+   * to match their chain's finality expectations.
+   *
+   * @type {number}
+   */
+  get defaultWaitTimeout() {
+    return 6e4;
+  }
+  /**
+   * Creates a new read-only wallet account.
+   *
+   * @param {string} [address] - The account's address.
+   */
+  constructor(address) {
+    this.__address = address;
+  }
+  /**
+   * The account's address.
+   *
+   * @protected
+   * @type {string | undefined}
+   */
+  get _address() {
+    return this.__address;
+  }
   /**
    * Returns the account's address.
    *
    * @returns {Promise<string>} The account's address.
    */
   async getAddress() {
-    throw new NotImplementedError("getAddress()");
+    if (!this._address) {
+      throw new AssertionError("The account's address must be set to perform this operation.");
+    }
+    return this._address;
   }
   /**
    * Verifies a message's signature.
@@ -24036,15 +24297,18 @@ var IWalletAccountReadOnly = class {
    * @param {string} message - The original message.
    * @param {string} signature - The signature to verify.
    * @returns {Promise<boolean>} True if the signature is valid.
-   * @throws {Error} If the read-only wallet account class is not able to provide an implementation for the method.
+   * @throws {UnsupportedOperationError} If the read-only wallet account class is not able to provide an implementation for the method.
    */
   async verify(message, signature) {
-    throw new NotImplementedError("verify(message, signature)");
+    throw new UnsupportedOperationError("verify(message, signature)");
   }
   /**
    * Returns the account's native token balance.
    *
+   * @abstract
    * @returns {Promise<bigint>} The native token balance.
+   * @throws {ProviderRequiredError} If the method requires a provider.
+   * @throws {ProviderError} If the provider fails to fetch the account's balance.
    */
   async getBalance() {
     throw new NotImplementedError("getBalance()");
@@ -24052,8 +24316,13 @@ var IWalletAccountReadOnly = class {
   /**
    * Returns the account balance for a specific token.
    *
+   * @abstract
    * @param {string} tokenAddress - The smart contract address of the token.
    * @returns {Promise<bigint>} The token balance.
+   * @throws {ValueError} If the token's address is not valid.
+   * @throws {InvalidTokenError} If the token's address doesn't match an existing ERC 20 token.
+   * @throws {ProviderRequiredError} If the method requires a provider.
+   * @throws {ProviderError} If the provider fails to fetch the account's token balance.
    */
   async getTokenBalance(tokenAddress) {
     throw new NotImplementedError("getTokenBalance(tokenAddress)");
@@ -24061,8 +24330,13 @@ var IWalletAccountReadOnly = class {
   /**
    * Quotes the costs of a send transaction operation.
    *
+   * @abstract
    * @param {Transaction} tx - The transaction.
    * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
+   * @throws {ValueError} If the transaction is not valid.
+   * @throws {ProviderRequiredError} If the method requires a provider.
+   * @throws {ProviderError} If the provider fails to estimate the costs of the transaction.
+   * @throws {TransactionError} If the transaction fails with an error.
    */
   async quoteSendTransaction(tx) {
     throw new NotImplementedError("quoteSendTransaction(tx)");
@@ -24070,8 +24344,14 @@ var IWalletAccountReadOnly = class {
   /**
    * Quotes the costs of a transfer operation.
    *
+   * @abstract
    * @param {TransferOptions} options - The transfer's options.
    * @returns {Promise<Omit<TransferResult, 'hash'>>} The transfer's quotes.
+   * @throws {ValueError} If the transfer options are not valid.
+   * @throws {InvalidTokenError} If the token is not a valid ERC 20 token's address.
+   * @throws {ProviderRequiredError} If the method requires a provider.
+   * @throws {ProviderError} If the provider fails to estimate the costs of the transfer.
+   * @throws {TransferError} If the transfer fails with an error.
    */
   async quoteTransfer(options) {
     throw new NotImplementedError("quoteTransfer(options)");
@@ -24079,120 +24359,97 @@ var IWalletAccountReadOnly = class {
   /**
    * Returns a transaction's receipt.
    *
+   * @deprecated Use {@link getTransaction} instead, which returns a normalized, finality-based receipt. The native receipt fields remain available on each module's extended return type.
+   * @abstract
    * @param {string} hash - The transaction's hash.
    * @returns {Promise<unknown | null>} The receipt, or null if the transaction has not been included in a block yet.
+   * @throws {ValueError} If the hash is not valid.
+   * @throws {ProviderRequiredError} If the method requires a provider.
+   * @throws {ProviderError} If the provider fails to fetch the transaction's receipt.
    */
   async getTransactionReceipt(hash) {
     throw new NotImplementedError("getTransactionReceipt(hash)");
   }
-};
-
-// node_modules/@tetherto/wdk-wallet/src/wallet-account.js
-init_buffer_shim();
-var IWalletAccount = class extends IWalletAccountReadOnly {
   /**
-   * The derivation path's index of this account.
+   * Returns a normalized, finality-based receipt for a transaction.
    *
-   * @type {number}
+   * @abstract
+   * @param {string} hash - The transaction's identifier (hash / signature / lt:hash).
+   * @returns {Promise<TransactionReceipt>} The normalized receipt.
+   * @throws {ValueError} If the hash is not a valid identifier.
+   * @throws {NoSuchElementError} If no transaction has been found for the given hash.
+   * @throws {ProviderRequiredError} If the method requires a provider.
+   * @throws {ProviderError} If the provider fails to fetch the transaction.
    */
-  get index() {
-    throw new NotImplementedError("index");
+  async getTransaction(hash) {
+    throw new NotImplementedError("getTransaction(hash)");
   }
   /**
-   * The derivation path of this account (see [BIP-44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)).
+   * Blocks until a transaction reaches a terminal state (the requested finality
+   * target or `dropped`), or times out.
    *
-   * @type {string}
-   */
-  get path() {
-    throw new NotImplementedError("path");
-  }
-  /**
-   * The account's key pair.
+   * The polling loop and target resolution are chain-agnostic: this method only
+   * interprets the normalized receipt returned by {@link getTransaction}. A
+   * {@link NoSuchElementError} is treated as a transient not-found, so the loop
+   * keeps polling until the timeout.
    *
-   * @type {KeyPair}
+   * @param {string} hash - The transaction's identifier.
+   * @param {WaitForTransactionOptions} [options] - The wait options.
+   * @returns {Promise<TransactionReceipt>} The terminal receipt: the finality target reached (inspect `success` to tell success from revert), or `dropped`.
+   * @throws {ValueError} If the hash is not a valid identifier.
+   * @throws {ProviderRequiredError} If the method requires a provider.
+   * @throws {ProviderError} If the provider fails to fetch the transaction.
+   * @throws {TimeoutError} If the operation times out.
    */
-  get keyPair() {
-    throw new NotImplementedError("keyPair");
-  }
-  /**
-   * Signs a message.
-   *
-   * @param {string} message - The message to sign.
-   * @returns {Promise<string>} The message's signature.
-   */
-  async sign(message) {
-    throw new NotImplementedError("sign(message)");
-  }
-  /**
-   * Signs a transaction
-   *
-   * @param {Transaction} tx - The transaction to sign.
-   * @returns {Promise<TSignedTransaction>} The signed transaction.
-   */
-  async signTransaction(tx) {
-    throw new NotImplementedError("signTransaction(tx)");
-  }
-  /**
-   * Verifies a message's signature.
-   *
-   * @param {string} message - The original message.
-   * @param {string} signature - The signature to verify.
-   * @returns {Promise<boolean>} True if the signature is valid.
-   */
-  async verify(message, signature) {
-    throw new NotImplementedError("verify(message, signature)");
-  }
-  /**
-   * Sends a transaction.
-   *
-   * @param {Transaction | TSignedTransaction} tx - The transaction.
-   * @returns {Promise<TransactionResult>} The transaction's result.
-   */
-  async sendTransaction(tx) {
-    throw new NotImplementedError("sendTransaction(tx)");
-  }
-  /**
-   * Quotes the costs of a send transaction operation.
-   *
-   * @param {Transaction | TSignedTransaction} tx - The transaction.
-   * @returns {Promise<Omit<TransactionResult, 'hash'>>} The transaction's quotes.
-   */
-  async quoteSendTransaction(tx) {
-    throw new NotImplementedError("quoteSendTransaction(tx)");
-  }
-  /**
-   * Transfers a token to another address.
-   *
-   * @param {TransferOptions} options - The transfer's options.
-   * @returns {Promise<TransferResult>} The transfer's result.
-   */
-  async transfer(options) {
-    throw new NotImplementedError("transfer(options)");
-  }
-  /**
-   * Returns a read-only copy of the account.
-   *
-   * @returns {Promise<IWalletAccountReadOnly>} The read-only account.
-   */
-  async toReadOnlyAccount() {
-    throw new NotImplementedError("toReadOnlyAccount()");
-  }
-  /**
-   * Disposes the wallet account, erasing the private key from the memory.
-   */
-  dispose() {
-    throw new NotImplementedError("dispose()");
+  async waitForTransaction(hash, options = {}) {
+    const {
+      target = "confirmed",
+      interval = this.defaultWaitInterval,
+      timeout = this.defaultWaitTimeout,
+      maxPollErrors = 3
+    } = options;
+    const deadline = Date.now() + timeout;
+    let droppedStreak = 0;
+    let errorStreak = 0;
+    while (true) {
+      let receipt = null;
+      try {
+        receipt = await this.getTransaction(hash);
+        errorStreak = 0;
+      } catch (error) {
+        if (error instanceof NoSuchElementError) {
+          errorStreak = 0;
+        } else if (error instanceof ProviderError) {
+          if (++errorStreak > maxPollErrors) {
+            throw error;
+          }
+        } else {
+          throw error;
+        }
+      }
+      if (receipt) {
+        if (receipt.finality === "dropped") {
+          if (++droppedStreak >= 2) {
+            return receipt;
+          }
+        } else {
+          droppedStreak = 0;
+          if (FINALITY[receipt.finality] >= FINALITY[target]) {
+            return receipt;
+          }
+        }
+      } else {
+        droppedStreak = 0;
+      }
+      if (Date.now() >= deadline) {
+        throw new TimeoutError(`Transaction '${hash}' did not reach '${target}' within the timeout.`);
+      }
+      await sleep(interval);
+    }
   }
 };
-
-// node_modules/@tetherto/wdk-wallet/src/signer.js
-init_buffer_shim();
-
-// src/engine.js
-init_buffer_shim();
 
 // src/fee.js
-init_buffer_shim();
 var TEST_NETWORK_FEE = { safety: 3, min: 30, max: 500, blockVsize: 1e6 };
 var MAINNET_FEE = { safety: 1.25, min: 2, max: 100, blockVsize: 1e6 };
 var feeFor = (network) => network === "Mainnet" ? MAINNET_FEE : TEST_NETWORK_FEE;
@@ -24211,7 +24468,6 @@ function bid(rates, fee = TEST_NETWORK_FEE) {
 }
 
 // src/bip322.js
-init_buffer_shim();
 var enc = new TextEncoder();
 var sha256 = async (bytes) => new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
 var dsha256 = async (bytes) => sha256(await sha256(bytes));
@@ -24351,13 +24607,13 @@ async function buildVirtualTxs(address, message) {
 var kv = (key, value) => cat(withLen(key), withLen(value));
 async function buildToSignPsbt(address, message, extra = []) {
   const { toSign, scriptPubKey } = await buildVirtualTxs(address, message);
-  const global = cat(kv(new Uint8Array([0]), toSign));
+  const global2 = cat(kv(new Uint8Array([0]), toSign));
   const witnessUtxo = cat(u64le(0n), withLen(scriptPubKey));
   const input = cat(kv(new Uint8Array([1]), witnessUtxo), ...extra.map(([k, v]) => kv(k, v)));
   const psbt = cat(
     new Uint8Array([112, 115, 98, 116, 255]),
     // magic "psbt" + 0xff
-    global,
+    global2,
     new Uint8Array([0]),
     input,
     new Uint8Array([0]),
@@ -24412,7 +24668,6 @@ function signatureFromWitness(witnessBytes) {
 }
 
 // src/slots.js
-init_buffer_shim();
 var SLOTS = {
   utxoNum: 3,
   utxoSizeSat: 2e4,
@@ -24464,7 +24719,6 @@ function explainSendError(message, rate) {
 }
 
 // src/serial-queue.js
-init_buffer_shim();
 function serialQueue() {
   let tail = Promise.resolve();
   return (task) => {
@@ -24567,13 +24821,13 @@ var Engine = class {
    * @returns {Promise<void>} When the wallet is open.
    */
   async open(mnemonic) {
-    const { default: initWasm, restoreKeys, WasmWallet } = this._bindings;
+    const { default: initWasm, restoreKeys: restoreKeys2, WasmWallet: WasmWallet2 } = this._bindings;
     if (!initialising.has(this._bindings)) {
       initialising.set(this._bindings, initWasm());
     }
     await initialising.get(this._bindings);
-    const keys = restoreKeys(this._config.network, mnemonic);
-    this._wallet = await WasmWallet.create(JSON.stringify({
+    const keys = restoreKeys2(this._config.network, mnemonic);
+    this._wallet = await WasmWallet2.create(JSON.stringify({
       // The IndexedDB key is `dataDir/<master fingerprint>`. It carries the network by
       // default, because a shared key loads the other chain's snapshot and BDK rejects it.
       dataDir: this._config.dataDir,
@@ -24649,6 +24903,22 @@ var Engine = class {
   async listTransfers(assetId) {
     const transfers = await this.run(() => this.plain(this._listTransfers(assetId)).slice().reverse());
     return this._withConfirmations(transfers);
+  }
+  /**
+   * The wallet's own transactions, newest first: plain Bitcoin sends and receives, slot
+   * housekeeping, and the transactions RGB sends anchored. Amounts in sats. Unconfirmed ones
+   * carry a `confirmations` count; a confirmed one reports `Settled`, since one confirmation
+   * is where this wallet settles.
+   *
+   * @returns {Promise<Array<Object>>} The transactions.
+   */
+  async listTransactions() {
+    const txs = await this.run(() => this.plain(this.wallet.listTransactions()));
+    const shaped = txs.map((tx) => ({
+      ...tx,
+      status: tx.confirmationTime ? "Settled" : "WaitingConfirmations"
+    }));
+    return this._withConfirmations(shaped).sort((a, b) => (b.confirmationTime?.timestamp ?? Number.MAX_SAFE_INTEGER) - (a.confirmationTime?.timestamp ?? Number.MAX_SAFE_INTEGER));
   }
   /**
    * Free allocation slots. Receiving needs at least one.
@@ -25181,12 +25451,8 @@ var Engine = class {
   }
 };
 
-// src/wallet-account-rgb.js
-init_buffer_shim();
-
 // src/wallet-account-read-only-rgb.js
-init_buffer_shim();
-var WalletAccountReadOnlyRgb = class extends IWalletAccountReadOnly {
+var WalletAccountReadOnlyRgb = class extends WalletAccountReadOnly {
   /**
    * @param {import('./engine.js').default} engine - The engine to read through.
    */
@@ -25257,6 +25523,15 @@ var WalletAccountReadOnlyRgb = class extends IWalletAccountReadOnly {
     return this._engine.listTransfers(assetId);
   }
   /**
+   * The wallet's own transactions, newest first, with a confirmation count on the ones still
+   * waiting. Plain Bitcoin sends and receives are here; {@link listTransfers} knows only RGB.
+   *
+   * @returns {Promise<Array<Object>>} The transactions.
+   */
+  async listTransactions() {
+    return this._engine.listTransactions();
+  }
+  /**
    * The transfer a witness transaction produced.
    *
    * @param {string} hash - The txid.
@@ -25265,6 +25540,20 @@ var WalletAccountReadOnlyRgb = class extends IWalletAccountReadOnly {
   async getTransactionReceipt(hash) {
     const transfers = await this._engine.listTransfers();
     return transfers.find((t) => t.txid === hash) ?? null;
+  }
+  /**
+   * Not available: an RGB transfer anchors on-chain in a batch with others, so a witness
+   * txid does not resolve into a per-transfer finality receipt. {@link getTransactionReceipt}
+   * returns what this wallet knows about the transfer itself.
+   *
+   * @param {string} hash - The txid.
+   * @returns {Promise<import('@tetherto/wdk-wallet').TransactionReceipt>} Never returns.
+   * @throws {UnsupportedOperationError} Always.
+   */
+  async getTransaction(hash) {
+    throw new UnsupportedOperationError(
+      "getTransaction: RGB transfers anchor in batches, there is no per-transfer on-chain receipt."
+    );
   }
   /**
    * What a Bitcoin send would cost. RGB has no gas: the cost is the miner fee, and the rate
@@ -25328,13 +25617,13 @@ var WalletAccountReadOnlyRgb = class extends IWalletAccountReadOnly {
 };
 
 // src/wallet-account-rgb.js
-var WalletAccountRgb = class extends IWalletAccount {
+var WalletAccountRgb = class extends WalletAccountReadOnlyRgb {
   /**
    * @param {import('./engine.js').default} engine - The open engine.
    * @param {number} index - The account index.
    */
   constructor(engine, index) {
-    super();
+    super(engine);
     this._engine = engine;
     this._index = index;
     this._readOnly = new WalletAccountReadOnlyRgb(engine);
@@ -25352,10 +25641,37 @@ var WalletAccountRgb = class extends IWalletAccount {
    * without handing the key back out; there is nothing to return that would not be a copy
    * of the secret in JavaScript memory.
    *
+   * @returns {import('@tetherto/wdk-wallet').KeyPair} Never returns.
    * @throws {UnsupportedOperationError} Always.
    */
   get keyPair() {
     throw new UnsupportedOperationError("keyPair is not exposed by the RGB engine.");
+  }
+  /**
+   * Not available in the WDK's sense: an RGB transfer is not a transaction the caller builds
+   * and this wallet signs. The PSBT is built and signed inside {@link transfer} and
+   * {@link sendTransaction}, because only rgb-lib knows which colored UTXOs go into it.
+   *
+   * @returns {Promise<unknown>} Never returns.
+   * @throws {UnsupportedOperationError} Always.
+   */
+  async signTransaction() {
+    throw new UnsupportedOperationError(
+      "signTransaction: RGB signs the PSBT it builds itself, inside transfer."
+    );
+  }
+  /**
+   * Not available: message signing here is BIP-322 over a taproot key, and verifying it needs
+   * a Schnorr check that the WebAssembly bindings do not expose. The base class would throw
+   * the same error with a less specific reason.
+   *
+   * @returns {Promise<boolean>} Never returns.
+   * @throws {UnsupportedOperationError} Always.
+   */
+  async verify() {
+    throw new UnsupportedOperationError(
+      "verify: the engine signs BIP-322 but exposes no Schnorr verification to check one."
+    );
   }
   /** @returns {Promise<string>} The wallet's Bitcoin address. */
   async getAddress() {
@@ -25393,6 +25709,14 @@ var WalletAccountRgb = class extends IWalletAccount {
    */
   async listTransfers(assetId) {
     return this._readOnly.listTransfers(assetId);
+  }
+  /**
+   * The wallet's own transactions, newest first: plain Bitcoin sends and receives included.
+   *
+   * @returns {Promise<Array<Object>>} The transactions.
+   */
+  async listTransactions() {
+    return this._readOnly.listTransactions();
   }
   /**
    * @param {string} hash - The txid.
@@ -25633,7 +25957,6 @@ var WalletAccountRgb = class extends IWalletAccount {
 };
 
 // src/snapshots.js
-init_buffer_shim();
 var SNAPSHOT_DB = "rgb_lib_wallet";
 var SNAPSHOT_STORE = "snapshots";
 var dataDirOf = (network) => `:memory:/${network}`;
@@ -25703,7 +26026,7 @@ var WalletManagerRgb = class extends WalletManager {
     const fee = { ...feeFor(network), ...config.fee || {} };
     fee.max = Math.min(fee.max, payableRate(slots));
     const dataDir = config.dataDir || dataDirOf(network);
-    this._config = {
+    this._cfg = {
       network,
       dataDir,
       esploraUrl,
@@ -25729,13 +26052,18 @@ var WalletManagerRgb = class extends WalletManager {
    * @throws {Error} If an index other than 0 is asked for.
    */
   async getAccount(index = 0) {
+    if (typeof index === "string") {
+      throw new UnsupportedOperationError(
+        "getAccount(signerName): an RGB wallet has no signers; the engine holds the keys."
+      );
+    }
     if (index !== 0) {
       throw new Error(`An RGB wallet has one account; index ${index} does not exist.`);
     }
-    if (!this._accounts[this._config.path]) {
-      this._accounts[this._config.path] = new WalletAccountRgb(await this._open(), 0);
+    if (!this._accounts[this._cfg.path]) {
+      this._accounts[this._cfg.path] = new WalletAccountRgb(await this._open(), 0);
     }
-    return this._accounts[this._config.path];
+    return this._accounts[this._cfg.path];
   }
   /**
    * @param {string} path - The derivation path.
@@ -25743,8 +26071,8 @@ var WalletManagerRgb = class extends WalletManager {
    * @throws {Error} If the path is not this wallet's.
    */
   async getAccountByPath(path) {
-    if (path !== this._config.path) {
-      throw new Error(`An RGB wallet has one account, at ${this._config.path}.`);
+    if (path !== this._cfg.path) {
+      throw new Error(`An RGB wallet has one account, at ${this._cfg.path}.`);
     }
     return this.getAccount(0);
   }
@@ -25757,7 +26085,7 @@ var WalletManagerRgb = class extends WalletManager {
   async getFeeRates() {
     const engine = await this._open();
     const normal = await engine.feeRate();
-    const fast = BigInt(Math.min(this._config.fee.max, Math.ceil(Number(normal) * 1.5)));
+    const fast = BigInt(Math.min(this._cfg.fee.max, Math.ceil(Number(normal) * 1.5)));
     return { normal, fast: fast > normal ? fast : normal };
   }
   /** Closes the wallet and forgets the recovery phrase held for it. */
@@ -25779,8 +26107,8 @@ var WalletManagerRgb = class extends WalletManager {
     if (!this._opening) {
       this._opening = (async () => {
         if (!this._mnemonic) throw new Error("The wallet manager has been disposed.");
-        const bindings = this._bindings || await import("@utexo/rgb-lib-wasm");
-        const engine = new Engine(bindings, this._config);
+        const bindings = this._bindings || await Promise.resolve().then(() => (init_rgb_lib_wasm_bindings(), rgb_lib_wasm_bindings_exports));
+        const engine = new Engine(bindings, this._cfg);
         await engine.open(this._mnemonic);
         this._engine = engine;
         return engine;
@@ -25822,17 +26150,6 @@ export {
   usableEmptySlots
 };
 /*! Bundled license information:
-
-ieee754/index.js:
-  (*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> *)
-
-buffer/index.js:
-  (*!
-   * The buffer module from node.js, for the browser.
-   *
-   * @author   Feross Aboukhadijeh <https://feross.org>
-   * @license  MIT
-   *)
 
 @noble/hashes/utils.js:
   (*! noble-hashes - MIT License (c) 2022 Paul Miller (paulmillr.com) *)

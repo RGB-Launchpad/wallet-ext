@@ -157,6 +157,16 @@ const CASES = [
     { name: "home-asset-inflight", label: "an in-flight asset names its step under the amount",
       state: { ...BASE, assets: ASSETS, transfers: TRANSFERS, target: 3 },
       expect: { assetSub: ["Confirming · in the mempool"] } },
+    { name: "activity-btc", label: "plain Bitcoin sends and reads appear in the record, in BTC",
+      state: { ...BASE, transfers: [
+        { kind: "SendBtc", status: "WaitingConfirmations", confirmations: 0, txid: "dd11",
+          amount: "290000", created_at: NOW - 30, batchTransferIdx: null },
+        { kind: "ReceiveBtc", status: "Settled", txid: "ee22",
+          amount: "3580000", created_at: NOW - 7200, batchTransferIdx: null },
+        ...TRANSFERS,
+      ], target: 3 }, view: "hist",
+      expect: { rows: 6, histAmts: ["−0.0029 BTC", "+0.0358 BTC", "+100000 SIGSMOKE", "+5000 SIGSMOKE",
+                                    "+1 SIGSMOKE", "−42 SIGSMOKE"] } },
     { name: "settings-lang", label: "the language row shows the language in use, not the default",
       state: { ...BASE, lang: "zh" }, click: "#gear",
       expect: { langLabel: "中文" } },
@@ -217,6 +227,9 @@ for (const c of CASES) {
             `${el.children[0]?.textContent.trim()} = ${el.children[1]?.textContent.trim()}`),
         // The step under an in-flight asset amount: a bare delta reads as stuck.
         assetSub: [...document.querySelectorAll("#homeList .asset .amt small.fine")]
+            .map((el) => el.textContent.trim()),
+        // Amounts as the row shows them, so a plain Bitcoin row cannot render as base units.
+        histAmts: [...document.querySelectorAll("#histList .tx .mid .num")]
             .map((el) => el.textContent.trim()),
         noticeRows: document.getElementById("banner").hidden ? 0 : document.querySelectorAll("#banner .note").length,
         redRows: document.querySelectorAll("#banner .note.red").length,

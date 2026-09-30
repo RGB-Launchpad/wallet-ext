@@ -147,6 +147,29 @@ function needOnline() {
     return S.online;
 }
 
+/**
+ * What one transfer moved, in the asset's base units. rgb-lib carries the amount inside the
+ * assignments, not as a field: the sum of what was assigned, falling back to what was asked
+ * for while a receive is still on its way in. `Assignment` is `{ Fungible: <base units> }`.
+ */
+function transferAmount(row) {
+    const one = (x) => (x && typeof x === "object" && x.Fungible != null ? BigInt(x.Fungible) : 0n);
+    const assigned = (row.assignments || []).reduce((n, x) => n + one(x), 0n);
+    return (assigned > 0n ? assigned : one(row.requestedAssignment)).toString();
+}
+
+/** A transfer row in the shape the UI reads: amount and assetId derived, timestamps named. */
+function transferRow(row, assetId) {
+    return {
+        ...row,
+        assetId: assetId ?? row.assetId,
+        amount: row.amount ?? transferAmount(row),
+        created_at: row.createdAt ?? row.created_at,
+        updated_at: row.updatedAt ?? row.updated_at,
+        batchTransferIdx: row.batchTransferIdx ?? row.batch_transfer_idx,
+    };
+}
+
 /** Sats parked on the seal output a swap pays the buyer. rgb-lib's own UTXO size. */
 const SWAP_SEAL_SATS = 1000;
 
@@ -364,10 +387,47 @@ const handlers = {
         // `target` is what this wallet asked for when it built the invoice, so the UI can
         // say "1 of 1" rather than a bare count. rgb-lib does not hand the stored value
         // back, but the wallet has only ever passed this constant.
-        return {
-            transfers: await needAccount().listTransfers(assetId || undefined),
-            target: DEFAULTS.minConfirmations,
-        };
+        const account = needAccount();
+        let rows = await account.listTransfers(assetId || undefined);
+        // A transfer row carries no asset id of its own and no flat amount: both are derived
+        // here, in the row shape the UI reads. The asset comes from the per-asset listing.
+        if (assetId) rows = rows.map((r) => transferRow(r, assetId));
+        else if (rows.length) {
+            const byIdx = new Map();
+            for (const a of await account.listAssets()) {
+                for (const r of await account.listTransfers(a.assetId)) byIdx.set(r.idx, a.assetId);
+            }
+            rows = rows.map((r) => transferRow(r, byIdx.get(r.idx)));
+        }
+
+        // Plain Bitcoin sends and receives live in the wallet's transaction list, not among
+        // the RGB transfers. The two meet at the transactions an RGB transfer anchored on,
+        // which the transfer rows already cover.
+        const txs = assetId ? [] : await account.listTransactions().catch(() => []);
+        const seen = new Set(rows.map((r) => r.txid).filter(Boolean));
+        const btc = [];
+        for (const tx of txs) {
+            if (tx.transactionType !== "User" || seen.has(tx.txid)) continue;
+            const recv = BigInt(tx.received) > BigInt(tx.sent);
+            // `sent` counts the wallet's inputs and `received` its own outputs back, so what
+            // reached the destination is the difference minus the fee. For a receive it is
+            // the whole of `received`: the sender paid the fee.
+            const amount = recv
+                ? BigInt(tx.received)
+                : BigInt(tx.sent) - BigInt(tx.received) - BigInt(tx.fee || 0);
+            if (amount <= 0n) continue;
+            btc.push({
+                kind: recv ? "ReceiveBtc" : "SendBtc",
+                status: tx.status,
+                confirmations: tx.confirmations,
+                txid: tx.txid,
+                amount: amount.toString(),
+                created_at: Number(tx.confirmationTime?.timestamp ?? Math.floor(Date.now() / 1000)),
+                batchTransferIdx: null,
+            });
+        }
+        const transfers = [...btc, ...rows].sort((x, y) => (y.created_at ?? 0) - (x.created_at ?? 0));
+        return { transfers, target: DEFAULTS.minConfirmations };
     },
 
     /** Encrypted backup. The phrase alone cannot restore RGB assets; the stash must be included. */

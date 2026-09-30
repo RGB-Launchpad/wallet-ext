@@ -983,8 +983,9 @@ $("doSendBtc").onclick = async () => {
     btn.disabled = false; btcSendLabel();
     if (!r.ok) return setErr("sendErr", r.err);
     sent(`<span>${esc(t("Broadcast"))} <code>${esc(r.data.txid)}</code></span>`);
-    $("bAmount").value = ""; syncBtcAmountHint();
+    $("bAmount").value = ""; $("bAddr").value = ""; syncBtcAmountHint();
     await loadBtc();
+    await loadHome();               // the balance card counts the change this send created
     await refreshBanner();
 };
 
@@ -1085,13 +1086,17 @@ function renderHistory() {
     }
     box.innerHTML = list.map((tr) => {
         const asset = assetsCache.find((x) => x.assetId === tr.assetId);
-        // An asset no longer held is not in the cache, so precision is unknown more often
-        // here. Unknown precision is marked, as on the balance rows.
-        const a = tr.amount != null ? amountOf(tr.amount, asset?.precision) : null;
         const recv = String(tr.kind || "").startsWith("Receive");
         const issued = tr.kind === "Issuance";
+        // A plain Bitcoin row is sats and reads as BTC; an asset row is in the asset's own
+        // units. An asset no longer held is not in the cache, so precision is unknown more
+        // often here. Unknown precision is marked, as on the balance rows.
+        const btc = String(tr.kind || "").endsWith("Btc");
+        const a = tr.amount != null
+            ? (btc ? { text: sats.toBtc(tr.amount), unknown: false } : amountOf(tr.amount, asset?.precision))
+            : null;
         const verb = issued ? t("Issued") : recv ? t("Received") : t("Sent");
-        const amt = a ? `${recv || issued ? "+" : "−"}${a.text}${a.unknown ? ` (${t("base units")})` : ""}` : "";
+        const amt = a ? `${recv || issued ? "+" : "−"}${a.text}${!btc && a.unknown ? ` (${t("base units")})` : ""}${btc ? " BTC" : ""}` : "";
         const age = ago(tr.updated_at ?? tr.created_at);
         const stuck = !finished(tr) && tr.batchTransferIdx != null;
         return `<div class="tx">
