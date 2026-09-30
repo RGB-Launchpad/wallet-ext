@@ -154,6 +154,9 @@ const CASES = [
       state: { ...BASE, assets: [HELD] }, view: "send",
       fill: { "#sAmount": "1270000" }, click: "#doSendRgb",
       expect: { sendErr: "More than can be sent now. Max 8888" } },
+    { name: "home-asset-inflight", label: "an in-flight asset names its step under the amount",
+      state: { ...BASE, assets: ASSETS, transfers: TRANSFERS, target: 3 },
+      expect: { assetSub: ["Confirming · in the mempool"] } },
     { name: "settings-lang", label: "the language row shows the language in use, not the default",
       state: { ...BASE, lang: "zh" }, click: "#gear",
       expect: { langLabel: "中文" } },
@@ -212,6 +215,9 @@ for (const c of CASES) {
         })(),
         btcRows: [...document.querySelectorAll("#btcBal .r")].map((el) =>
             `${el.children[0]?.textContent.trim()} = ${el.children[1]?.textContent.trim()}`),
+        // The step under an in-flight asset amount: a bare delta reads as stuck.
+        assetSub: [...document.querySelectorAll("#homeList .asset .amt small.fine")]
+            .map((el) => el.textContent.trim()),
         noticeRows: document.getElementById("banner").hidden ? 0 : document.querySelectorAll("#banner .note").length,
         redRows: document.querySelectorAll("#banner .note.red").length,
         // Nothing may widen the popup past its fixed body width.

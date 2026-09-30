@@ -355,8 +355,12 @@ async function loadHome({ rise = false } = {}) {
     setErr("homeErr", null);
     const box = $("homeList");
 
-    const [oc, btc] = await Promise.all([call("assets"), call("btc")]);
+    const [oc, btc, tc] = await Promise.all([call("assets"), call("btc"), call("transfers")]);
     if (oc.ok) assetsCache = oc.data.assets || [];       // Send and Activity read this
+    if (tc.ok) {
+        hist = { list: tc.data.transfers, target: tc.data.target ?? 1, err: null };
+        scheduleAutoRefresh(hist.list);
+    }
 
     // Built before the error check so a failed asset read still shows the Bitcoin that pays fees.
     // The address is the one `btc` already returned: asking a second command for the identity
@@ -395,15 +399,20 @@ async function loadHome({ rise = false } = {}) {
     // index leaves every asset exactly as the wallet already knows it.
     const st = await call("settings").catch(() => null);
     const s = st?.ok ? st.data : null;
+    if (s?.network) netName = s.network;
     const known = await assetList(s?.registryUrl, s?.network || "").catch(() => null);
 
     box.innerHTML = list.map((a) => {
         const settled = amountOf(a.balance?.settled ?? "0", a.precision);
         const id = describe(known, a.assetId, a.ticker);
+        // An in-flight delta names its step under the amount: a wait with no progress reads
+        // as stuck, and the step is what tells the two apart.
+        const live = hist.list.find((tr) => tr.assetId === a.assetId && !finished(tr));
+        const prog = live ? transferProgress(live) : "";
         return `<button class="asset" data-id="${esc(a.assetId)}">
             ${avatar(a)}
             <span class="nm"><span class="tk">${esc(a.ticker || "?")}</span><span class="sub">${esc(a.name || "")}</span></span>
-            <span class="amt">${esc(settled.text)}${deltaOf(a.balance?.settled, a.balance?.future, a.precision)}
+            <span class="amt">${esc(settled.text)}${deltaOf(a.balance?.settled, a.balance?.future, a.precision)}${prog ? `<small class="fine">${esc(prog)}</small>` : ""}
                 ${settled.unknown ? `<small class="unk">base units</small>` : ""}</span>
         </button>
         <div class="more" hidden>
@@ -990,6 +999,52 @@ const STATUS_TEXT = {
 const STATUS_CLASS = { WaitingCounterparty: "wait", WaitingConfirmations: "conf", Settled: "ok", Failed: "fail" };
 const finished = (t) => t.status === "Settled" || t.status === "Failed";
 
+/** Status line for one unfinished transfer: the step, plus confirmations when known. */
+function transferProgress(tr) {
+    const s = STATUS_TEXT[tr.status] ? t(STATUS_TEXT[tr.status]) : (tr.status || "");
+    const p = progressText(tr, hist.target);
+    return p ? `${s} · ${p}` : s;
+}
+
+/**
+ * A rough block interval per network, for estimating how long the remaining confirmations
+ * take. Minutes; the test networks mine on demand so the figure is nominal.
+ */
+const BLOCK_MIN = { Mainnet: 10, Signet: 10, Testnet4: 10, Regtest: 0.05, Local: 0.05 };
+let netName = "Mainnet";
+
+/**
+ * The bar and estimate under a waiting row. The estimate is remaining confirmations times
+ * the block interval; a send waiting for its counterparty gets the bar but no countdown,
+ * because that wait is the other side's pace and no interval predicts it.
+ */
+function waitBar(tr) {
+    const target = Math.max(1, hist.target);
+    const c = tr.confirmations;
+    const frac = c == null ? 0 : Math.min(1, c / target);
+    const left = c == null ? null : target - c;
+    const eta = left != null && left > 0 && tr.status === "WaitingConfirmations"
+        ? t("≈ {m} min to confirm", { m: Math.max(1, Math.ceil(left * (BLOCK_MIN[netName] ?? 10))) })
+        : "";
+    return `<span class="waitbar"><i style="width:${Math.round(frac * 100)}%"></i></span>
+        ${eta ? `<span class="eta">${esc(eta)}</span>` : ""}`;
+}
+
+// A wait the wallet can see is a wait the user is watching: while any transfer is
+// unfinished the figures re-run on a timer rather than waiting for a manual Sync. The
+// engine keeps its own cooldown between refreshes, which is what bounds the chain scan.
+let autoTimer = null;
+function scheduleAutoRefresh(transfers) {
+    const live = transfers.some((tr) => !finished(tr));
+    if (!live) { if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } return; }
+    if (autoTimer) return;
+    autoTimer = setInterval(async () => {
+        await call("refresh").catch(() => {});      // refused while in cooldown; next tick retries
+        await loadHome();
+        if (!$("v-hist").hidden) await loadHistory();
+    }, 30_000);
+}
+
 /**
  * How far along a pending transfer is. `null` means the indexer could not be asked, which
  * is different from zero and so says nothing rather than "no confirmations".
@@ -1037,14 +1092,14 @@ function renderHistory() {
         const issued = tr.kind === "Issuance";
         const verb = issued ? t("Issued") : recv ? t("Received") : t("Sent");
         const amt = a ? `${recv || issued ? "+" : "−"}${a.text}${a.unknown ? ` (${t("base units")})` : ""}` : "";
-        const p = finished(tr) ? "" : progressText(tr, hist.target);
         const age = ago(tr.updated_at ?? tr.created_at);
         const stuck = !finished(tr) && tr.batchTransferIdx != null;
         return `<div class="tx">
             <span class="ic">${issued ? ICON.issue : recv ? ICON.in : ICON.out}</span>
             <span class="mid">
                 <span>${esc(verb)} <span class="num">${esc(amt)} ${esc(asset?.ticker || "")}</span></span>
-                <span class="st ${STATUS_CLASS[tr.status] || ""}"><i></i>${esc(STATUS_TEXT[tr.status] ? t(STATUS_TEXT[tr.status]) : (tr.status || ""))}${p ? ` · ${esc(p)}` : ""}</span>
+                <span class="st ${STATUS_CLASS[tr.status] || ""}"><i></i>${esc(finished(tr) ? (STATUS_TEXT[tr.status] ? t(STATUS_TEXT[tr.status]) : (tr.status || "")) : transferProgress(tr))}</span>
+                ${finished(tr) ? "" : waitBar(tr)}
                 ${tr.txid ? `<span class="id" hidden>${esc(tr.txid)}</span>` : ""}
             </span>
             <span class="end">${age ? esc(t("{t} ago", { t: age })) : ""}
