@@ -29,7 +29,8 @@ const stub = (state) => `(() => {
     sites: () => ok({ sites: {} }),
     transfers: () => ok({ transfers: S.transfers || [], target: S.target ?? 1 }),
     refresh: () => ok(S.refresh || { ms: 12, cooldownMs: 5000 }),
-    settings: () => ok({ network: S.network || "Signet", registryUrl: S.registryUrl || "" }),
+    settings: () => ok({ network: S.network || "Signet", registryUrl: S.registryUrl || "",
+                         lang: S.lang || "en" }),
   };
   window.chrome = {
     runtime: { sendMessage: async (m) => (REPLY[m.cmd] ? REPLY[m.cmd]() : ok({})),
@@ -106,11 +107,11 @@ const CASES = [
       view: "btc",
       expect: { btcRows: ["Available = 0.01035768 BTC", "Confirmed = 0.01035768 BTC",
                           "In RGB UTXOs = 0 BTC"] } },
-    { name: "home-pending", label: "the headline is the confirmed balance; unconfirmed gets its own line",
+    { name: "home-pending", label: "the headline counts what is spendable now; the unconfirmed part is named under it",
       state: { ...BASE, btc: { vanilla: { spendable: 1141877, settled: 1035768 },
                                colored: { future: 750000 } } },
       wait: 900,           // the figure counts up for 700ms before the exact text lands
-      expect: { btcBig: "0.01035768", btcPend: "+0.00106109 BTC waiting to confirm" } },
+      expect: { btcBig: "0.01141877", btcPend: "Includes 0.00106109 BTC waiting to confirm" } },
     { name: "home-all-confirmed", label: "no pending line under the headline when nothing is unconfirmed",
       state: { ...BASE, btc: { vanilla: { spendable: 1035768, settled: 1035768 },
                                colored: { future: 0 } } },
@@ -153,6 +154,9 @@ const CASES = [
       state: { ...BASE, assets: [HELD] }, view: "send",
       fill: { "#sAmount": "1270000" }, click: "#doSendRgb",
       expect: { sendErr: "More than can be sent now. Max 8888" } },
+    { name: "settings-lang", label: "the language row shows the language in use, not the default",
+      state: { ...BASE, lang: "zh" }, click: "#gear",
+      expect: { langLabel: "中文" } },
     { name: "activity-confirmations", label: "Activity shows confirmation progress",
       state: { ...BASE, transfers: TRANSFERS, target: 3 }, view: "hist",
       expect: { rows: 4,
@@ -200,6 +204,12 @@ for (const c of CASES) {
         bPendHint: document.getElementById("bPendHint").hidden ? "" : document.getElementById("bPendHint").textContent,
         syncDisabled: document.getElementById("doRefresh").disabled,
         syncLabel: document.getElementById("refreshMs").textContent,
+        // The language row is a picker button standing in for the native select: the button
+        // is what the user reads, and it does not follow `.value` set in code on its own.
+        langLabel: (() => {
+            const b = document.getElementById("stLang").nextElementSibling;
+            return b?.querySelector(".picker-label")?.textContent ?? "";
+        })(),
         btcRows: [...document.querySelectorAll("#btcBal .r")].map((el) =>
             `${el.children[0]?.textContent.trim()} = ${el.children[1]?.textContent.trim()}`),
         noticeRows: document.getElementById("banner").hidden ? 0 : document.querySelectorAll("#banner .note").length,

@@ -5,7 +5,7 @@ import { isChainMismatch, RESETTABLE } from "./lib/chain.js";
 import * as motion from "./lib/motion.js";
 import { assetList, describe } from "./lib/registry.js";
 import { renderQr } from "./lib/qr.js";
-import { enhanceAll } from "./lib/picker.js";
+import { enhanceAll, refreshSelect } from "./lib/picker.js";
 import { t, setLang, applyI18n, localeOf } from "./lib/i18n.js";
 import { btcKey, outputKeyHex } from "./lib/keys.js";
 
@@ -367,18 +367,21 @@ async function loadHome({ rise = false } = {}) {
             $("idAddr").innerHTML = `<span>${esc(short(btcAddress))}</span>${ICON.copy}`;
             show("idAddr");
         }
-        // The headline counts confirmed coins only. `spendable` adds unconfirmed incoming
-        // UTXOs; as the big number that reads as money already owned, yet a dropped or
-        // replaced parent takes it back. Anything in flight gets its own line instead.
+        // The headline is what the wallet can spend right now: confirmed coins plus the
+        // unconfirmed remainder. Counting only the confirmed part shows 0 after a send that
+        // spent the last confirmed UTXO, because the change is real but unconfirmed — that
+        // reads as the money being gone. The unconfirmed part keeps its own line, since a
+        // dropped or replaced parent still takes it back.
         const vanilla = btc.data.balance?.vanilla;
-        const s = String(vanilla?.settled ?? "0");
-        btcSettled = s;
-        btcSpendable = String(vanilla?.spendable ?? s);
+        const settled = String(vanilla?.settled ?? "0");
+        btcSettled = settled;
+        btcSpendable = String(vanilla?.spendable ?? settled);
+        const s = btcSpendable;
         motion.count($("btcBig"), shownSats === null ? 0 : Number(shownSats) / 1e8, Number(s) / 1e8, 8, sats.toBtc(s));
         shownSats = s;
-        const pending = BigInt(btcSpendable) - BigInt(s);
+        const pending = BigInt(btcSpendable) - BigInt(settled);
         if (pending > 0n) {
-            $("btcPend").textContent = t("+{n} BTC waiting to confirm", { n: sats.toBtc(pending.toString()) });
+            $("btcPend").textContent = t("Includes {n} BTC waiting to confirm", { n: sats.toBtc(pending.toString()) });
             show("btcPend");
         } else show("btcPend", false);
     }
@@ -1302,6 +1305,7 @@ async function loadSettingsForm() {
     $("stNetwork").innerHTML = Object.entries(NETWORKS)
         .map(([k, v]) => `<option value="${esc(k)}" ${k === s.network ? "selected" : ""}>${esc(v.label)}</option>`).join("");
     $("stLang").value = s.lang || "en";
+    refreshSelect($("stLang"));
     fillEndpoints(s.network);
     formBase = formValues();
     syncDirty();
