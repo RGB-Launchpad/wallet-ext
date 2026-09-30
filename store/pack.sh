@@ -19,6 +19,8 @@ esbuild() {
 }
 
 VERSION=$(python3 -c "import json;print(json.load(open('manifest.json'))['version'])")
+# The manifest's host lists come from config.js (SITE). A pack always ships the propagated form.
+node store/gen-manifest.mjs
 OUT="$PWD/store/rgb-wallet-${VERSION}.zip"
 rm -f "$OUT"
 

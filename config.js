@@ -1,3 +1,32 @@
+/**
+ * The platform's hostnames, in one place. Every default endpoint, `OFFICIAL_ORIGINS` and the
+ * domain lists in manifest.json derive from this block; `store/gen-manifest.mjs` rewrites the
+ * manifest from it. Changing the platform's domain changes this block and nothing else.
+ */
+export const SITE = {
+    // The origin whose pages this extension injects into and marks as official.
+    origin: "https://dhorse.fun",
+    // The consignment relay, one instance per sandbox boundary. Written into every invoice the
+    // user issues (the endpoint field).
+    proxy: "proxy.dhorse.fun",
+    regtestProxy: "regtest-proxy.dhorse.fun",
+    // The sandbox chain's Esplora, reachable through a tunnel so testers need no local node.
+    regtestIndexer: "regtest-indexer.dhorse.fun",
+};
+
+/** Hosts this extension may reach. Derived from `SITE`; see `store/gen-manifest.mjs`. */
+export const HOST_PERMISSIONS = [
+    "https://mempool.space/*",
+    "https://blockstream.info/*",
+    `${SITE.origin}/*`,
+    `https://${SITE.proxy}/*`,
+    `https://${SITE.regtestProxy}/*`,
+    `https://${SITE.regtestIndexer}/*`,
+];
+
+/** Pages the content scripts run on. Derived from `SITE`; see `store/gen-manifest.mjs`. */
+export const CONTENT_MATCHES = [`${SITE.origin}/*`, "http://127.0.0.1/*", "http://localhost/*"];
+
 // Networks and endpoint defaults.
 export const NETWORKS = {
     // Real funds. `fee` replaces the test-network bidding below: overpaying there costs nothing,
@@ -8,17 +37,17 @@ export const NETWORKS = {
         esplora: "https://mempool.space/api",
         // Asset identity. Read-only, and asked for the whole list rather than per asset, so it
         // never learns which contracts this wallet holds (lib/registry.js).
-        registry: "https://dhorse.fun/api/mainnet/public",
-        proxy: "rpcs://proxy.dhorse.fun/json-rpc",
+        registry: `${SITE.origin}/api/mainnet/public`,
+        proxy: `rpcs://${SITE.proxy}/json-rpc`,
         fee: { safety: 1.25, min: 2, max: 100 },
     },
     Signet: {
         label: "Signet",
         // Esplora over HTTP: browsers have no TCP.
         esplora: "https://mempool.space/signet/api",
-        registry: "https://dhorse.fun/api/signet/public",
+        registry: `${SITE.origin}/api/signet/public`,
         // Consignment relay. It sees recipient identifiers, so it is our own deployment.
-        proxy: "rpcs://proxy.dhorse.fun/json-rpc",
+        proxy: `rpcs://${SITE.proxy}/json-rpc`,
     },
     // NOTE: testnet4 addresses carry the same `tb1` prefix as Signet, so an address cannot tell
     // the two apart. Only the network setting and the invoice's network field do; a consignment
@@ -26,15 +55,15 @@ export const NETWORKS = {
     Testnet4: {
         label: "Testnet4",
         esplora: "https://mempool.space/testnet4/api",
-        proxy: "rpcs://proxy.dhorse.fun/json-rpc",
+        proxy: `rpcs://${SITE.proxy}/json-rpc`,
     },
     // The regtest sandbox runs on one machine and reaches everyone else through a tunnel,
     // so these are public hostnames, not localhost. Point them elsewhere in settings to run
     // against a sandbox of your own; saving asks for host access when the origin is new.
     Regtest: {
         label: "Regtest",
-        esplora: "https://regtest-indexer.dhorse.fun/regtest/api",
-        proxy: "rpcs://regtest-proxy.dhorse.fun/json-rpc",
+        esplora: `https://${SITE.regtestIndexer}/regtest/api`,
+        proxy: `rpcs://${SITE.regtestProxy}/json-rpc`,
     },
     // A regtest chain of your own, on this machine.
     //
@@ -62,10 +91,11 @@ export const chainOf = (network) => NETWORKS[network]?.chain || network;
  * site is safe. A copy of the site at another domain simply does not match; it must never be
  * possible for a page to claim the mark for itself, which is why this list is here and not
  * anything the page sends.
- * NOTE: keep it in step with `content_scripts.matches` in manifest.json — an origin that can
- * reach `window.rgb` but is not listed here shows up unmarked, which reads as a warning.
+ * NOTE: must equal `CONTENT_MATCHES`'s site entry — an origin that can reach `window.rgb` but
+ * is not listed here shows up unmarked, which reads as a warning. `store/gen-manifest.mjs` and
+ * `test/manifest-domains.test.mjs` hold the two lists together.
  */
-export const OFFICIAL_ORIGINS = ["https://dhorse.fun"];
+export const OFFICIAL_ORIGINS = [SITE.origin];
 
 export const PER_NETWORK = ["esploraUrl", "proxyUrl", "registryUrl", "esploraExtras"];
 

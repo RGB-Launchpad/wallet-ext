@@ -6,22 +6,21 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { OFFICIAL_ORIGINS } from "../config.js";
+import { OFFICIAL_ORIGINS, SITE } from "../config.js";
 
 const manifest = JSON.parse(readFileSync(new URL("../manifest.json", import.meta.url), "utf8"));
 
 test("the official origin is the site, by exact match", () => {
-    assert.deepEqual(OFFICIAL_ORIGINS, ["https://dhorse.fun"]);
+    assert.deepEqual(OFFICIAL_ORIGINS, [SITE.origin]);
+    const host = new URL(SITE.origin).hostname;
+    // Built from the real name so the list keeps its point through a domain switch.
     for (const impostor of [
-        "https://dhorse.fun.evil.com",   // the name as a prefix of another domain
-        "https://evil.com/dhorse.fun",   // the name in a path
-        "https://dhorse.xyz",            // another tld
-        "https://dhorse.com",
-        "https://d-horse.fun",
-        "https://darkhorse.fun",
-        "http://dhorse.fun",             // no tls
-        "https://www.dhorse.fun",        // a host the extension does not inject into
-        "https://sub.dhorse.fun",
+        `https://${host}.evil.com`,   // the name as a prefix of another domain
+        `https://evil.com/${host}`,   // the name in a path
+        `https://${host.split(".")[0]}.example`, // the name under another tld
+        `http://${host}`,             // no tls
+        `https://www.${host}`,        // a host the extension does not inject into
+        `https://sub.${host}`,
     ]) {
         assert.ok(!OFFICIAL_ORIGINS.includes(impostor), `${impostor} must not be marked official`);
     }

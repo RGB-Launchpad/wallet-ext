@@ -8,6 +8,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
+import { SITE } from "../config.js";
 
 const source = readFileSync(new URL("../inject.js", import.meta.url), "utf8");
 
@@ -25,7 +26,7 @@ function run({ rgbTaken = false } = {}) {
             for (const cb of handlers.get(ev.type) || []) cb(ev);
             return true;
         },
-        location: { origin: "https://dhorse.fun" },
+        location: { origin: SITE.origin },
         postMessage() {},
     };
     if (rgbTaken) {
