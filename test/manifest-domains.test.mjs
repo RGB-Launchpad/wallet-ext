@@ -18,7 +18,9 @@ test("manifest content_scripts matches match config.js", () => {
     }
 });
 
-test("the official origin is the one site entry content scripts cover", () => {
+test("the official origin is one content scripts cover", () => {
     assert.deepEqual(OFFICIAL_ORIGINS, [SITE.origin]);
-    assert.ok(CONTENT_MATCHES.includes(`${SITE.origin}/*`));
+    assert.ok(
+        CONTENT_MATCHES.includes("<all_urls>") || CONTENT_MATCHES.includes(`${SITE.origin}/*`),
+    );
 });

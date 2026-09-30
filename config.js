@@ -4,14 +4,14 @@
  * manifest from it. Changing the platform's domain changes this block and nothing else.
  */
 export const SITE = {
-    // The origin whose pages this extension injects into and marks as official.
-    origin: "https://dhorse.fun",
+    // The origin whose pages this extension marks as official.
+    origin: "https://rgblaunchpad.meme",
     // The consignment relay, one instance per sandbox boundary. Written into every invoice the
     // user issues (the endpoint field).
-    proxy: "proxy.dhorse.fun",
-    regtestProxy: "regtest-proxy.dhorse.fun",
+    proxy: "proxy.rgblaunchpad.meme",
+    regtestProxy: "regtest-proxy.rgblaunchpad.meme",
     // The sandbox chain's Esplora, reachable through a tunnel so testers need no local node.
-    regtestIndexer: "regtest-indexer.dhorse.fun",
+    regtestIndexer: "regtest-indexer.rgblaunchpad.meme",
 };
 
 /** Hosts this extension may reach. Derived from `SITE`; see `store/gen-manifest.mjs`. */
@@ -24,8 +24,13 @@ export const HOST_PERMISSIONS = [
     `https://${SITE.regtestIndexer}/*`,
 ];
 
-/** Pages the content scripts run on. Derived from `SITE`; see `store/gen-manifest.mjs`. */
-export const CONTENT_MATCHES = [`${SITE.origin}/*`, "http://127.0.0.1/*", "http://localhost/*"];
+/**
+ * Pages the content scripts run on. Every page, so any RGB platform can discover the wallet
+ * through the provider announcement; connecting and signing still go through the wallet's own
+ * approval window, and only `OFFICIAL_ORIGINS` gets the official mark. Derived from `SITE`;
+ * see `store/gen-manifest.mjs`.
+ */
+export const CONTENT_MATCHES = ["<all_urls>"];
 
 // Networks and endpoint defaults.
 export const NETWORKS = {
@@ -90,10 +95,9 @@ export const chainOf = (network) => NETWORKS[network]?.chain || network;
  * 🚨 The mark says "this is the origin the extension was built with", nothing about whether a
  * site is safe. A copy of the site at another domain simply does not match; it must never be
  * possible for a page to claim the mark for itself, which is why this list is here and not
- * anything the page sends.
- * NOTE: must equal `CONTENT_MATCHES`'s site entry — an origin that can reach `window.rgb` but
- * is not listed here shows up unmarked, which reads as a warning. `store/gen-manifest.mjs` and
- * `test/manifest-domains.test.mjs` hold the two lists together.
+ * anything the page sends. Content scripts run on every page (see `CONTENT_MATCHES`), so any
+ * other platform can connect — it just shows up unmarked, which is the mark doing its job.
+ * `store/gen-manifest.mjs` and `test/manifest-domains.test.mjs` hold the two lists together.
  */
 export const OFFICIAL_ORIGINS = [SITE.origin];
 

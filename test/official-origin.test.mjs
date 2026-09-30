@@ -27,11 +27,12 @@ test("the official origin is the site, by exact match", () => {
 });
 
 // A site that can reach `window.rgb` but carries no mark reads as a warning, so the two lists
-// have to agree: every marked origin is one the content script actually runs on.
+// have to agree: every marked origin is one the content script actually runs on. `<all_urls>`
+// covers any origin.
 test("every official origin can reach the provider", () => {
     const matches = manifest.content_scripts.flatMap((c) => c.matches);
     for (const origin of OFFICIAL_ORIGINS) {
-        assert.ok(matches.includes(`${origin}/*`),
+        assert.ok(matches.includes("<all_urls>") || matches.includes(`${origin}/*`),
             `${origin} is marked official but content_scripts does not cover it`);
     }
 });

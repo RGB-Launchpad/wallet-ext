@@ -13,10 +13,10 @@
   "host_permissions": [
     "https://mempool.space/*",
     "https://blockstream.info/*",
-    "https://dhorse.fun/*",
-    "https://proxy.dhorse.fun/*",
-    "https://regtest-proxy.dhorse.fun/*",
-    "https://regtest-indexer.dhorse.fun/*"
+    "https://rgblaunchpad.meme/*",
+    "https://proxy.rgblaunchpad.meme/*",
+    "https://regtest-proxy.rgblaunchpad.meme/*",
+    "https://regtest-indexer.rgblaunchpad.meme/*"
   ],
   "background": {
     "service_worker": "sw.js",
@@ -39,9 +39,7 @@
   "content_scripts": [
     {
       "matches": [
-        "https://dhorse.fun/*",
-        "http://127.0.0.1/*",
-        "http://localhost/*"
+        "<all_urls>"
       ],
       "js": [
         "inject.js"
@@ -52,9 +50,7 @@
     },
     {
       "matches": [
-        "https://dhorse.fun/*",
-        "http://127.0.0.1/*",
-        "http://localhost/*"
+        "<all_urls>"
       ],
       "js": [
         "content.js"
