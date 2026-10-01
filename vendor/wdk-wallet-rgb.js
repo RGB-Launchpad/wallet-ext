@@ -26748,7 +26748,7 @@ var Engine = class {
       ...tx,
       status: tx.confirmationTime ? "Settled" : "WaitingConfirmations"
     }));
-    return this._withConfirmations(shaped).sort((a, b) => (b.confirmationTime?.timestamp ?? Number.MAX_SAFE_INTEGER) - (a.confirmationTime?.timestamp ?? Number.MAX_SAFE_INTEGER));
+    return (await this._withConfirmations(shaped)).sort((a, b) => (b.confirmationTime?.timestamp ?? Number.MAX_SAFE_INTEGER) - (a.confirmationTime?.timestamp ?? Number.MAX_SAFE_INTEGER));
   }
   /**
    * Free allocation slots. Receiving needs at least one.

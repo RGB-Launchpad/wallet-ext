@@ -403,7 +403,9 @@ const handlers = {
         // Plain Bitcoin sends and receives live in the wallet's transaction list, not among
         // the RGB transfers. The two meet at the transactions an RGB transfer anchored on,
         // which the transfer rows already cover.
-        const txs = assetId ? [] : await account.listTransactions().catch(() => []);
+        // A failed listing is not an empty one: it propagates, so the interface shows the
+        // error rather than "Nothing yet." while money moved.
+        const txs = assetId ? [] : await account.listTransactions();
         const seen = new Set(rows.map((r) => r.txid).filter(Boolean));
         const btc = [];
         for (const tx of txs) {

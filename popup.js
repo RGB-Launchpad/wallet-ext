@@ -18,6 +18,30 @@ const show = (id, on = true) => { $(id).hidden = !on; };
 // Errors pass through `t()` so our own messages translate; engine originals fall through
 // unchanged, which is what an unknown key already does.
 const setErr = (id, e) => { const n = $(id); if (!e) { n.hidden = true; return; } n.textContent = t(String(e)); n.hidden = false; };
+/**
+ * Engine errors the user can act on, said in the user's words. The raw engine text (a
+ * Rust debug dump) is what `t()` would leave untranslated and unactionable, so the network
+ * class of failures becomes one sentence naming the fix.
+ */
+function explain(e) {
+    const s = String(e);
+    if (/Failed to fetch|Esplora async|Indexer error|Request\(request|network error/i.test(s)) {
+        return "Cannot reach the blockchain indexer. Check the network, or pick another indexer in Settings.";
+    }
+    return s;
+}
+/**
+ * An engine that is wedged never answers at all — different from answering with an error —
+ * and a screen that must appear cannot wait on it forever. On a timeout the locked screen
+ * offers a restart: `lock` closes the offscreen document, hung calls and all.
+ */
+const ENGINE_SILENT = "The wallet engine is not responding. Restart it and try again.";
+async function callTimed(cmd, args, ms) {
+    return await Promise.race([
+        call(cmd, args),
+        new Promise((res) => setTimeout(() => res({ ok: false, err: ENGINE_SILENT, timedOut: true }), ms)),
+    ]);
+}
 /** Head and tail of a long identifier; the full value stays one copy away. */
 const short = (s, head = 8, tail = 6) => { s = String(s || ""); return s.length > head + tail + 1 ? `${s.slice(0, head)}…${s.slice(-tail)}` : s; };
 
@@ -72,8 +96,11 @@ async function route() {
 
     const st = await call("isUnlocked");
     if (st.ok && st.data.unlocked) {
-        const s = await call("status");
+        // The only engine call before the first screen: when it goes silent the popup would
+        // otherwise sit on its bare background and read as a wallet that does not open.
+        const s = await callTimed("status", {}, 12000);
         if (s.ok && s.data.unlocked) { await enterMain(s.data); return; }
+        if (s.timedOut) { await showLocked(s.err); return; }
     }
     await showLocked();
 }
@@ -111,10 +138,13 @@ function showOnly(which) {
     }
 }
 
-async function showLocked() {
+async function showLocked(err = null) {
     showOnly("locked");
     const s = await call("settings");         // readable while locked; `status` is not
     if (s.ok) setNet($("netLocked"), s.data.network);
+    // A wedged engine is a lock with no way back in; say so and offer the restart.
+    setErr("lockErr", err ? explain(err) : null);
+    show("doRestart", !!err);
 }
 
 /**
@@ -259,16 +289,32 @@ $("doUnlock").onclick = async () => {
     setErr("lockErr", null);
     $("doUnlock").disabled = true; $("doUnlock").textContent = t("Unlocking…");
     bootStart("bootProgLocked");
-    const r = await call("unlock", { password: $("pwUnlock").value });
+    // 45s: long enough for a slow-but-working indexer (the boot stages and their timer
+    // show life meanwhile), short enough that a wedged engine still reaches the restart.
+    const r = await callTimed("unlock", { password: $("pwUnlock").value }, 45000);
     bootEnd("bootProgLocked");
     $("doUnlock").disabled = false; $("doUnlock").textContent = t("Unlock");
-    if (!r.ok) { setErr("lockErr", r.err); motion.shake($("pwUnlock")); return; }
+    if (!r.ok) {
+        setErr("lockErr", explain(r.err));
+        motion.shake($("pwUnlock"));
+        if (r.timedOut) show("doRestart", true);
+        return;
+    }
     $("pwUnlock").value = "";
     show("lockMsg", false);
     await enterMain(r.data);
 };
 $("pwUnlock").onkeydown = (e) => { if (e.key === "Enter") $("doUnlock").click(); };
 $("lock").onclick = async () => { await call("lock"); await showLocked(); };
+// The same door out of a wedged engine, offered where the wedge is felt: `lock` is a local
+// command and closes the offscreen document — hung calls and all — so the next unlock
+// starts a fresh engine instead of queueing behind the dead one.
+$("doRestart").onclick = async () => {
+    $("doRestart").disabled = true;
+    await call("lock");
+    $("doRestart").disabled = false;
+    await showLocked();
+};
 
 // The engine can close while a tab is on screen; the view follows it back to the locked
 // screen instead of showing a stale unlocked one. Boot stages light the progress rows.
@@ -360,6 +406,11 @@ async function loadHome({ rise = false } = {}) {
     if (tc.ok) {
         hist = { list: tc.data.transfers, target: tc.data.target ?? 1, err: null };
         scheduleAutoRefresh(hist.list);
+    } else {
+        // Never read a failed history as an empty one: that is exactly how a broken record
+        // list showed "Nothing yet." while money moved.
+        hist = { list: [], target: hist.target ?? 1, err: tc.err };
+        scheduleAutoRefresh([]);
     }
 
     // Built before the error check so a failed asset read still shows the Bitcoin that pays fees.
@@ -875,7 +926,7 @@ async function decodeInvoice() {
     if (!text) { show("decoded", false); return; }
     const r = await call("decodeInvoice", { invoice: text });
     if (text !== $("sInvoice").value.trim()) return;          // edited while reading
-    if (!r.ok) { show("decoded", false); return setErr("sendErr", r.err); }
+    if (!r.ok) { show("decoded", false); return setErr("sendErr", explain(r.err)); }
     const d = r.data.data;
     // Preselect the asset the invoice names, before reading the requested amount:
     // the amount can only be shown in human units once the precision is known.
@@ -950,7 +1001,7 @@ $("doSendRgb").onclick = async () => {
         feeRate: Number($("sFee").value) || undefined,
     });
     btn.disabled = false; rgbSendLabel();
-    if (!r.ok) return setErr("sendErr", r.err);
+    if (!r.ok) return setErr("sendErr", explain(r.err));
     // Not broadcast. RGB posts the consignment and waits: the recipient validates it and
     // acknowledges, and only then does this wallet put the transaction on chain.
     sent(`<span>${esc(t("Sent"))} · <code>${esc(r.data.txid)}</code></span>
@@ -981,7 +1032,7 @@ $("doSendBtc").onclick = async () => {
         address: $("bAddr").value, amountSat: amt, feeRate: Number($("bFee").value) || undefined,
     });
     btn.disabled = false; btcSendLabel();
-    if (!r.ok) return setErr("sendErr", r.err);
+    if (!r.ok) return setErr("sendErr", explain(r.err));
     sent(`<span>${esc(t("Broadcast"))} <code>${esc(r.data.txid)}</code></span>`);
     $("bAmount").value = ""; $("bAddr").value = ""; syncBtcAmountHint();
     await loadBtc();
@@ -1078,7 +1129,7 @@ async function loadHistory() {
 
 function renderHistory() {
     const box = $("histList");
-    if (hist.err) { box.innerHTML = `<div class="empty-line err">${esc(t(String(hist.err)))}</div>`; return; }
+    if (hist.err) { box.innerHTML = `<div class="empty-line err">${esc(t(explain(hist.err)))}</div>`; return; }
     const list = hist.list.filter((tr) => histFilter === "all" || (histFilter === "done") === finished(tr));
     if (!list.length) {
         box.innerHTML = `<div class="empty-line">${esc(hist.list.length ? t("Nothing here.") : t("Nothing yet."))}</div>`;
