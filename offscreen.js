@@ -8,7 +8,7 @@
 import init, { generateKeys, restoreKeys, WasmWallet, WasmInvoice } from "./pkg/rgb_lib_wasm_bindings.js";
 // The same module again, as a namespace: the wallet module takes the bindings by injection.
 import * as BINDINGS from "./pkg/rgb_lib_wasm_bindings.js";
-import { unseal, seal } from "./lib/vault.js";
+import { unseal, seal, canonPhrase } from "./lib/vault.js";
 import { listen, plain } from "./lib/msg.js";
 import { dataDirOf } from "./lib/chain.js";
 import WalletManagerRgb from "./vendor/wdk-wallet-rgb.js";
@@ -283,7 +283,7 @@ const handlers = {
         // rgb-lib's four networks again, not the wallet's own name for the chain.
         const chain = chainOf(settings.network);
         stage("phrase");
-        const m = (mnemonic || "").trim() || generateKeys(chain).mnemonic;
+        const m = canonPhrase(mnemonic || "") || generateKeys(chain).mnemonic;
         // Validates the phrase before sealing it.
         restoreKeys(chain, m);
         stage("encrypt");
@@ -298,7 +298,7 @@ const handlers = {
         const { password, vault } = args;
         if (!vault) throw new Error("No wallet yet");
         stage("phrase");
-        const m = await unseal(vault, password);      // throws on a wrong password
+        const m = canonPhrase(await unseal(vault, password));  // unseal throws on a wrong password
         stage("open");
         return await bootWallet(m, settingsOf(args));
     },
@@ -320,7 +320,7 @@ const handlers = {
     async changePassword({ oldPassword, newPassword, vault }) {
         if (!newPassword || newPassword.length < 8) throw new Error("New password must be at least 8 characters");
         if (!vault) throw new Error("Current vault not provided");
-        const m = await unseal(vault, oldPassword);
+        const m = canonPhrase(await unseal(vault, oldPassword));
         return { vault: await seal(m, newPassword) };
     },
 

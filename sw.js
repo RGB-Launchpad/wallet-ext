@@ -7,7 +7,7 @@
 import { ok, err } from "./lib/msg.js";
 import { DEFAULTS, NETWORKS, PER_NETWORK } from "./config.js";
 import { migrate, resolve, apply, netDefaults } from "./lib/settings.js";
-import { unseal } from "./lib/vault.js";
+import { unseal, canonPhrase } from "./lib/vault.js";
 import { SNAPSHOT_DB, RESETTABLE, snapshotPrefix, deleteSnapshots } from "./lib/chain.js";
 
 let creating = null;
@@ -310,7 +310,10 @@ const LOCAL_ONLY = {
         const vault = await getVault();
         if (!vault) return err("No wallet yet");
         try {
-            return ok({ mnemonic: await unseal(vault, password) });
+            // Canonical, because this is the phrase the engine actually seeds from — a copy
+            // with the vault's original stray whitespace would derive a different wallet
+            // in a strict bip39 wallet.
+            return ok({ mnemonic: canonPhrase(await unseal(vault, password)) });
         } catch {
             return err("Wrong password");
         }

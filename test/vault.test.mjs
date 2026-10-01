@@ -1,7 +1,7 @@
 // Vault encryption, run in Node: Web Crypto is the same API there.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { seal, unseal, rekey, VAULT } from "../lib/vault.js";
+import { seal, unseal, rekey, canonPhrase, VAULT } from "../lib/vault.js";
 
 globalThis.btoa ??= (s) => Buffer.from(s, "binary").toString("base64");
 globalThis.atob ??= (s) => Buffer.from(s, "base64").toString("binary");
@@ -69,4 +69,13 @@ test("empty phrase or password is rejected", async () => {
 test("an unknown vault version is rejected rather than guessed", async () => {
     const v = await seal(M, "pw", FAST);
     await assert.rejects(() => unseal({ ...v, v: 99 }, "pw"), /version/);
+});
+
+test("canonPhrase collapses the whitespace a paste can leave in a vault", async () => {
+    // A phrase imported with a line break or double spaces went into the vault as-is and
+    // unlocked for years through rgb-lib's word-wise parsing; the wallet module's JS bip39
+    // check splits on single spaces and rejects it. Unlock canonicalizes first.
+    const messy = M.replace("abandon abandon", "abandon  abandon").replace("about", "\nabout ");
+    const v = await seal(messy, "pw", FAST);
+    assert.equal(canonPhrase(await unseal(v, "pw")), M);
 });
