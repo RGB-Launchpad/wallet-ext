@@ -1,0 +1,18 @@
+<!doctype html><meta charset="utf-8"><title>unlock probe</title><pre id="out">running…</pre>
+<script type="module">
+// Reproduces the 0.17.3 unlock path in a plain page: seal a valid phrase, unseal it,
+// canonicalize, and construct the wallet module exactly as offscreen.js does.
+import { seal, unseal, canonPhrase, VAULT } from "../../lib/vault.js";
+import WalletManagerRgb from "../../vendor/wdk-wallet-rgb.js";
+const out = document.getElementById("out");
+const M = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+try {
+  const vault = await seal(M, "probe-password", { ...VAULT.KDF_DEFAULT, iterations: 1000 });
+  const m = canonPhrase(await unseal(vault, "probe-password"));
+  const manager = new WalletManagerRgb(m, { network: "Signet" });
+  out.textContent = JSON.stringify({ ok: true, seedBytes: manager.seed.length });
+} catch (e) {
+  out.textContent = JSON.stringify({ error: e && e.stack ? e.stack : String(e) });
+}
+document.title = "done";
+</script>
